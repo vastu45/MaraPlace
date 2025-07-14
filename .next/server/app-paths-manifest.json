@@ -1,7 +1,7 @@
 {
-  "/agent-register/page": "app/agent-register/page.js",
-  "/login/page": "app/login/page.js",
-  "/signup/page": "app/signup/page.js",
   "/page": "app/page.js",
-  "/api/agents/route": "app/api/agents/route.js"
+  "/agents/[id]/page": "app/agents/[id]/page.js",
+  "/agents/dashboard/page": "app/agents/dashboard/page.js",
+  "/api/agents/[id]/route": "app/api/agents/[id]/route.js",
+  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js"
 }

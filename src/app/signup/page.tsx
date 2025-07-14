@@ -22,11 +22,24 @@ export default function SignupPage() {
     setLoading(true);
     setError("");
     setSuccess(false);
-    // TODO: Implement actual signup logic (API call)
-    setTimeout(() => {
+    try {
+      const res = await fetch("/api/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSuccess(true);
+        setForm({ name: "", email: "", password: "" });
+      } else {
+        setError(data.error || "Signup failed. Please try again.");
+      }
+    } catch (err) {
+      setError("Something went wrong. Please try again.");
+    } finally {
       setLoading(false);
-      setSuccess(true);
-    }, 1000);
+    }
   };
 
   const handleAgentRegister = () => {

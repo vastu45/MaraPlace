@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client'
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 import { randomUUID } from 'crypto';
+import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient()
 
@@ -193,6 +194,7 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const name = formData.get('name') as string;
     const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
     const phone = formData.get('phone') as string;
     const businessName = formData.get('businessName') as string;
     const address = formData.get('address') as string;
@@ -203,11 +205,15 @@ export async function POST(request: NextRequest) {
     const businessRegistration = formData.get('businessRegistration') as File | null;
     const maraCertificate = formData.get('maraCertificate') as File | null;
     const calendlyUrl = formData.get('calendlyUrl') as string;
+    const businessLogo = formData.get('businessLogo') as File | null;
 
     // Basic validation
-    if (!name || !email || !phone || !businessName || !address || !abn || !maraOrLawyerNumber || !businessAddress) {
+    if (!name || !email || !password || !phone || !businessName || !address || !abn || !maraOrLawyerNumber || !businessAddress) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     // Save files locally if present
     const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
@@ -216,12 +222,14 @@ export async function POST(request: NextRequest) {
     const photoUrl = await saveFile(photo, 'photo', uploadsDir, savedFiles);
     const businessRegUrl = await saveFile(businessRegistration, 'businessReg', uploadsDir, savedFiles);
     const maraCertUrl = await saveFile(maraCertificate, 'maraCert', uploadsDir, savedFiles);
+    const businessLogoUrl = await saveFile(businessLogo, 'businessLogo', uploadsDir, savedFiles);
 
     // Create User and AgentProfile
     const user = await prisma.user.create({
       data: {
         name,
         email,
+        password: hashedPassword,
         phone,
         role: 'AGENT',
         agentProfile: {

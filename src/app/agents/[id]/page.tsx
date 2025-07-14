@@ -71,57 +71,93 @@ export default function AgentProfile() {
   return (
     <div>
       <Navbar />
-      <div className="max-w-2xl mx-auto py-12 px-4">
-        <Card className="mb-8">
-          <div className="flex items-center gap-6 p-6">
-            <div className="flex-shrink-0">
-              {photoDoc ? (
-                <img src={photoDoc.url} alt={agent.name} className="w-28 h-28 rounded-full object-cover border-2 border-green-200 shadow" />
-              ) : (
-                <div className="w-28 h-28 rounded-full bg-gray-200 flex items-center justify-center text-4xl text-gray-400 border-2 border-green-200 shadow">
-                  <span>{agent.name?.[0]}</span>
-                </div>
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <CardHeader className="p-0 pb-2">
-                <CardTitle className="text-2xl font-bold truncate">{agent.name}</CardTitle>
-                <CardDescription className="truncate">
-                  {agent.businessName}
-                  {agent.businessCity ? ` - ${agent.businessCity}` : ""}
-                  {agent.businessState ? `, ${agent.businessState}` : ""}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="flex flex-wrap gap-2 items-center text-sm mb-1">
-                  <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-medium">MARA No: {agent.maraNumber}</span>
-                  <span className="bg-gray-100 text-gray-800 px-2 py-0.5 rounded-full font-medium">ABN: {agent.abn}</span>
-                  <span className="text-yellow-600">★ {agent.rating?.toFixed(1) ?? 'N/A'}</span>
-                  <span className="text-gray-500">({agent.totalReviews} reviews)</span>
-                </div>
-                <div className="text-xs text-gray-600 dark:text-gray-300 mb-1">Languages: {agent.languages?.join(", ")}</div>
-                <div className="mt-1 text-sm text-gray-700 dark:text-gray-200 whitespace-pre-line">{agent.bio}</div>
-                {agent.calendlyUrl && (
-                  <div className="mt-4">
-                    <a
-                      href={agent.calendlyUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-block bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-2 rounded shadow transition"
-                    >
-                      Book Now
-                    </a>
-                  </div>
-                )}
-              </CardContent>
+      <div className="max-w-6xl mx-auto py-12 px-4 grid grid-cols-1 md:grid-cols-3 gap-8">
+        {/* Left: Agent Card */}
+        <div className="bg-white rounded-2xl shadow-lg p-8 flex flex-col items-center md:col-span-1">
+          <div className="relative mb-4">
+            {photoDoc ? (
+              <img src={photoDoc.url} alt={agent.name} className="w-32 h-32 rounded-full object-cover border-4 border-green-200 shadow" />
+            ) : (
+              <div className="w-32 h-32 rounded-full bg-gray-200 flex items-center justify-center text-5xl text-gray-400 border-4 border-green-200 shadow">
+                <span>{agent.name?.[0]}</span>
+              </div>
+            )}
+            {/* Verification badge */}
+            <span className="absolute bottom-2 right-2 bg-blue-500 text-white rounded-full p-1 shadow-lg" title="Verified">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+            </span>
+          </div>
+          <div className="text-2xl font-bold text-gray-900 mb-1 text-center">{agent.name}</div>
+          <div className="text-green-700 font-semibold text-sm mb-1 text-center">{agent.businessName}</div>
+          <div className="flex items-center justify-center gap-1 mb-2">
+            <span className="text-yellow-500 text-lg">★</span>
+            <span className="font-bold text-gray-700">{agent.rating?.toFixed(1) ?? 'N/A'}</span>
+            <span className="text-gray-500 text-xs">({agent.totalReviews} reviews)</span>
+          </div>
+          <div className="text-xs text-gray-500 mb-2 text-center">MARA No: <span className="font-semibold text-gray-700">{agent.maraNumber}</span></div>
+          <div className="text-xs text-gray-500 mb-2 text-center">ABN: <span className="font-semibold text-gray-700">{agent.abn || '---'}</span></div>
+          <div className="text-xs text-gray-500 mb-2 text-center">{agent.businessCity}, {agent.businessState}</div>
+          <div className="text-xs text-gray-500 mb-2 text-center">Phone: <span className="font-semibold text-gray-700">{agent.phone || '---'}</span></div>
+          <div className="text-xs text-gray-500 mb-2 text-center">Email: <span className="font-semibold text-gray-700">{agent.email || '---'}</span></div>
+          {/* Social icons placeholder */}
+          <div className="flex gap-3 mt-3">
+            <a href="#" className="text-blue-600 hover:text-blue-800"><svg width="20" height="20" fill="currentColor"><circle cx="10" cy="10" r="10" /></svg></a>
+            <a href="#" className="text-blue-400 hover:text-blue-600"><svg width="20" height="20" fill="currentColor"><rect width="20" height="20" rx="4" /></svg></a>
+            <a href="#" className="text-blue-700 hover:text-blue-900"><svg width="20" height="20" fill="currentColor"><polygon points="10,2 18,18 2,18" /></svg></a>
+          </div>
+        </div>
+        {/* Right: Details and Stats */}
+        <div className="md:col-span-2 flex flex-col gap-8">
+          {/* Agent Details */}
+          <div className="bg-white rounded-2xl shadow-lg p-8 mb-4">
+            <h2 className="text-xl font-bold mb-2 text-gray-800">Agent details</h2>
+            <div className="text-gray-600 mb-4">{agent.bio || 'No bio provided.'}</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
+              <div className="flex items-center gap-2">
+                <span className="text-blue-600">●</span>
+                <span className="font-semibold">Agency:</span>
+                <span className="ml-1 text-gray-700">{agent.businessName}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-blue-600">●</span>
+                <span className="font-semibold">Agent License:</span>
+                <span className="ml-1 text-gray-700">{agent.maraNumber}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-blue-600">●</span>
+                <span className="font-semibold">Tax Number:</span>
+                <span className="ml-1 text-gray-700">{agent.abn || '---'}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-blue-600">●</span>
+                <span className="font-semibold">Service area:</span>
+                <span className="ml-1 text-gray-700">{[agent.businessCity, agent.businessState].filter(Boolean).join(', ') || '---'}</span>
+              </div>
+              <div className="flex items-center gap-2 md:col-span-2">
+                <span className="text-blue-600">●</span>
+                <span className="font-semibold">Languages:</span>
+                <span className="ml-1 text-gray-700">{agent.languages?.join(', ') || '---'}</span>
+              </div>
             </div>
           </div>
-        </Card>
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>Uploaded Documents</CardTitle>
-          </CardHeader>
-          <CardContent>
+          {/* Property/Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4">
+            <div className="bg-white rounded-xl shadow p-6 flex flex-col items-center">
+              <div className="text-2xl font-bold text-green-700">{agent.totalBookings ?? 0}</div>
+              <div className="text-gray-500 text-sm mt-1 text-center">Total Consultations</div>
+            </div>
+            <div className="bg-white rounded-xl shadow p-6 flex flex-col items-center">
+              <div className="text-2xl font-bold text-blue-600">{agent.totalReviews ?? 0}</div>
+              <div className="text-gray-500 text-sm mt-1 text-center">Total Reviews</div>
+            </div>
+            <div className="bg-white rounded-xl shadow p-6 flex flex-col items-center">
+              <div className="text-2xl font-bold text-purple-600">{agent.services?.length ?? 0}</div>
+              <div className="text-gray-500 text-sm mt-1 text-center">Services Listed</div>
+            </div>
+          </div>
+          {/* Uploaded Documents */}
+          <div className="bg-white rounded-2xl shadow-lg p-8 mb-4">
+            <h2 className="text-lg font-bold mb-2 text-gray-800">Uploaded Documents</h2>
             <ul className="list-disc ml-5 mt-2">
               {agent.documents && agent.documents.length > 0 ? (
                 agent.documents.map((doc: any) => (
@@ -135,13 +171,10 @@ export default function AgentProfile() {
                 <li>No files uploaded</li>
               )}
             </ul>
-          </CardContent>
-        </Card>
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>Services</CardTitle>
-          </CardHeader>
-          <CardContent>
+          </div>
+          {/* Services */}
+          <div className="bg-white rounded-2xl shadow-lg p-8 mb-4">
+            <h2 className="text-lg font-bold mb-2 text-gray-800">Services</h2>
             <ul className="list-disc ml-5 mt-2">
               {agent.services && agent.services.length > 0 ? (
                 agent.services.map((service: any) => (
@@ -153,13 +186,10 @@ export default function AgentProfile() {
                 <li>No services listed</li>
               )}
             </ul>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Reviews</CardTitle>
-          </CardHeader>
-          <CardContent>
+          </div>
+          {/* Recent Reviews */}
+          <div className="bg-white rounded-2xl shadow-lg p-8 mb-4">
+            <h2 className="text-lg font-bold mb-2 text-gray-800">Recent Reviews</h2>
             <ul className="list-disc ml-5 mt-2">
               {agent.recentReviews && agent.recentReviews.length > 0 ? (
                 agent.recentReviews.map((review: any, idx: number) => (
@@ -172,10 +202,7 @@ export default function AgentProfile() {
                 <li>No reviews yet</li>
               )}
             </ul>
-          </CardContent>
-        </Card>
-        <div className="mt-8 text-center">
-          <Link href="/" className="text-green-700 underline">&larr; Back to Home</Link>
+          </div>
         </div>
       </div>
       <Footer />
