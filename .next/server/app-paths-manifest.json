@@ -1,7 +1,0 @@
-{
-  "/page": "app/page.js",
-  "/agents/[id]/page": "app/agents/[id]/page.js",
-  "/agents/dashboard/page": "app/agents/dashboard/page.js",
-  "/api/agents/[id]/route": "app/api/agents/[id]/route.js",
-  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js"
-}
