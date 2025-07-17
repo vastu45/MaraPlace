@@ -29,10 +29,13 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       agent: {
         id: agent.id,
         userId: agent.userId,
-        name: agent.user.name,
-        email: agent.user.email,
-        phone: agent.user.phone,
-        image: agent.user.image,
+        user: {
+          id: agent.user.id,
+          name: agent.user.name,
+          email: agent.user.email,
+          phone: agent.user.phone,
+          image: agent.user.image,
+        },
         maraNumber: agent.maraNumber,
         maraVerified: agent.maraVerified,
         businessName: agent.businessName,

@@ -18,7 +18,7 @@ export default function LoginPage() {
     if ((session?.user as any)?.role === "AGENT") {
       router.push("/agents/dashboard");
     } else if ((session?.user as any)?.role === "CLIENT") {
-      router.push("/");
+      router.push("/client/dashboard");
     }
   }, [session, router]);
 

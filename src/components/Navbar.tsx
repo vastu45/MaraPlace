@@ -31,13 +31,23 @@ export default function Navbar() {
             </button>
             {dropdownOpen && (
               <div className="absolute right-0 mt-2 w-40 bg-white border rounded shadow-lg z-20">
-                <Link
-                  href="/profile"
-                  className="block px-4 py-2 text-gray-700 hover:bg-green-50"
-                  onClick={() => setDropdownOpen(false)}
-                >
-                  Edit Profile
-                </Link>
+                {(session.user as any)?.role === "AGENT" ? (
+                  <Link
+                    href="/profile"
+                    className="block px-4 py-2 text-gray-700 hover:bg-green-50"
+                    onClick={() => setDropdownOpen(false)}
+                  >
+                    Edit Profile
+                  </Link>
+                ) : (
+                  <Link
+                    href="/client/dashboard"
+                    className="block px-4 py-2 text-gray-700 hover:bg-green-50"
+                    onClick={() => setDropdownOpen(false)}
+                  >
+                    Dashboard
+                  </Link>
+                )}
                 <button
                   onClick={() => { signOut(); setDropdownOpen(false); }}
                   className="w-full text-left px-4 py-2 text-gray-700 hover:bg-green-50"

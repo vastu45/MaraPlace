@@ -197,7 +197,6 @@ export async function POST(request: NextRequest) {
     const password = formData.get('password') as string;
     const phone = formData.get('phone') as string;
     const businessName = formData.get('businessName') as string;
-    const address = formData.get('address') as string;
     const abn = formData.get('abn') as string;
     const maraOrLawyerNumber = formData.get('maraOrLawyerNumber') as string;
     const businessAddress = formData.get('businessAddress') as string;
@@ -207,9 +206,34 @@ export async function POST(request: NextRequest) {
     const calendlyUrl = formData.get('calendlyUrl') as string;
     const businessLogo = formData.get('businessLogo') as File | null;
 
+    // Debug: Log received fields
+    console.log('Received form data:', {
+      name: !!name,
+      email: !!email,
+      password: !!password,
+      phone: !!phone,
+      businessName: !!businessName,
+      abn: !!abn,
+      maraOrLawyerNumber: !!maraOrLawyerNumber,
+      businessAddress: !!businessAddress
+    });
+
     // Basic validation
-    if (!name || !email || !password || !phone || !businessName || !address || !abn || !maraOrLawyerNumber || !businessAddress) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    if (!name || !email || !password || !phone || !businessName || !abn || !maraOrLawyerNumber || !businessAddress) {
+      const missingFields = [];
+      if (!name) missingFields.push('name');
+      if (!email) missingFields.push('email');
+      if (!password) missingFields.push('password');
+      if (!phone) missingFields.push('phone');
+      if (!businessName) missingFields.push('businessName');
+      if (!abn) missingFields.push('abn');
+      if (!maraOrLawyerNumber) missingFields.push('maraOrLawyerNumber');
+      if (!businessAddress) missingFields.push('businessAddress');
+      
+      return NextResponse.json({ 
+        error: 'Missing required fields',
+        missingFields 
+      }, { status: 400 });
     }
 
     // Hash password
@@ -237,10 +261,26 @@ export async function POST(request: NextRequest) {
             maraNumber: maraOrLawyerNumber,
             businessName,
             businessAddress,
+            businessCity: formData.get('businessCity') as string || undefined,
+            businessState: formData.get('businessState') as string || undefined,
+            businessPostcode: formData.get('businessPostcode') as string || undefined,
+            businessCountry: formData.get('businessCountry') as string || undefined,
+            businessPhone: formData.get('businessPhone') as string || undefined,
+            businessEmail: formData.get('businessEmail') as string || undefined,
+            businessWebsite: formData.get('businessWebsite') as string || undefined,
             calendlyUrl,
-            bio: '',
+            bio: formData.get('bio') as string || '',
+            specializations: formData.get('specializations') ? (formData.get('specializations') as string).split(',').map(s => s.trim()) : [],
+            languages: formData.get('languages') ? (formData.get('languages') as string).split(',').map(l => l.trim()) : [],
+            hourlyRate: formData.get('hourlyRate') ? parseFloat(formData.get('hourlyRate') as string) : undefined,
+            consultationFee: formData.get('consultationFee') ? parseFloat(formData.get('consultationFee') as string) : undefined,
+            experience: formData.get('experience') ? parseInt(formData.get('experience') as string, 10) : undefined,
+            qualifications: formData.get('qualifications') ? (formData.get('qualifications') as string).split(',').map(q => q.trim()) : [],
+            certifications: formData.get('certifications') ? (formData.get('certifications') as string).split(',').map(c => c.trim()) : [],
+            abn,
             status: 'PENDING',
             isAvailable: true,
+            defaultMeetingDuration: formData.get('defaultMeetingDuration') ? parseInt(formData.get('defaultMeetingDuration') as string, 10) : undefined,
           },
         },
       },
@@ -262,6 +302,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error registering agent:', error);
-    return NextResponse.json({ error: 'Failed to register agent' }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'Failed to register agent',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
 } 

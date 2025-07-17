@@ -66,6 +66,9 @@ async function main() {
         },
       },
     },
+    include: {
+      agentProfile: true,
+    },
   })
 
   const agent2 = await prisma.user.upsert({
@@ -105,6 +108,9 @@ async function main() {
           totalEarnings: 15300.00,
         },
       },
+    },
+    include: {
+      agentProfile: true,
     },
   })
 

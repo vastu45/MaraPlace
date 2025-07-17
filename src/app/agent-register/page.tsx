@@ -12,7 +12,6 @@ export default function AgentRegister() {
     email: "",
     phone: "",
     businessName: "",
-    address: "",
     abn: "",
     maraOrLawyerNumber: "",
     businessAddress: "",
@@ -54,8 +53,6 @@ export default function AgentRegister() {
     else if (!/^\d{8,15}$/.test(form.phone.replace(/\D/g, ''))) newErrors.phone = "Invalid phone number";
     // Business Name
     if (!form.businessName.trim()) newErrors.businessName = "Business name is required";
-    // Address
-    if (!form.address.trim()) newErrors.address = "Address is required";
     // ABN
     if (!form.abn) newErrors.abn = "ABN is required";
     else if (!/^\d{9,11}$/.test(form.abn.replace(/\D/g, ''))) newErrors.abn = "Invalid ABN (should be 9-11 digits)";
@@ -111,7 +108,6 @@ export default function AgentRegister() {
           email: "",
           phone: "",
           businessName: "",
-          address: "",
           abn: "",
           maraOrLawyerNumber: "",
           businessAddress: "",
@@ -257,17 +253,7 @@ export default function AgentRegister() {
                 />
                 {errors.businessAddress && <div className="text-red-500 text-xs mt-1">{errors.businessAddress}</div>}
               </div>
-              <div>
-                <label className="block font-medium mb-1">Address *</label>
-                <input
-                  type="text"
-                  name="address"
-                  value={form.address}
-                  onChange={handleChange}
-                  className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400"
-                />
-                {errors.address && <div className="text-red-500 text-xs mt-1">{errors.address}</div>}
-              </div>
+              {/* Address field removed */}
               <div>
                 <label className="block font-medium mb-1">MARA or Lawyer Number *</label>
                 <input

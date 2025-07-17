@@ -105,6 +105,15 @@ export default function AgentProfile() {
             <a href="#" className="text-blue-400 hover:text-blue-600"><svg width="20" height="20" fill="currentColor"><rect width="20" height="20" rx="4" /></svg></a>
             <a href="#" className="text-blue-700 hover:text-blue-900"><svg width="20" height="20" fill="currentColor"><polygon points="10,2 18,18 2,18" /></svg></a>
           </div>
+          
+          {/* Book Appointment Button */}
+          <div className="mt-6 w-full">
+            <Button asChild className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3">
+              <Link href={`/book/${agent.id}`}>
+                📅 Book Appointment
+              </Link>
+            </Button>
+          </div>
         </div>
         {/* Right: Details and Stats */}
         <div className="md:col-span-2 flex flex-col gap-8">

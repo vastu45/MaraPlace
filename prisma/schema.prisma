@@ -155,7 +155,8 @@ model AgentProfile {
   createdAt             DateTime     @default(now())
   updatedAt             DateTime     @updatedAt
   suspendReason         String?
-
+  defaultMeetingDuration Int? // in minutes, e.g., 30 or 60
+  abn                   String?      // Australian Business Number
   user                  User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   bookings              Booking[]
   reviews               Review[]
@@ -203,14 +204,19 @@ model Booking {
   date        DateTime
   startTime   String        // Format: "09:00"
   endTime     String        // Format: "10:00"
-  duration    Int           // Duration in minutes
+  duration    Int?          // Duration in minutes, now optional
   status      BookingStatus @default(PENDING)
   notes       String?       @db.Text
   meetingType MeetingType   @default(ONLINE)
   meetingLink String?       // For online meetings
   location    String?       // For in-person meetings
-  totalAmount Decimal       @db.Decimal(10, 2)
-  commission  Decimal       @db.Decimal(10, 2) // Platform commission
+  totalAmount Decimal?      @db.Decimal(10, 2) // Now optional
+  commission  Decimal?      @db.Decimal(10, 2) // Now optional
+  // Client contact information from booking form
+  clientName  String?       // Name entered in booking form
+  clientEmail String?       // Email entered in booking form
+  clientPhone String?       // Phone entered in booking form
+  seenByAgent Boolean       @default(false) // Track if agent has seen this booking
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 

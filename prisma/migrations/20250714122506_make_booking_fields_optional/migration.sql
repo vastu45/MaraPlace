@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "Booking" ALTER COLUMN "duration" DROP NOT NULL,
+ALTER COLUMN "totalAmount" DROP NOT NULL,
+ALTER COLUMN "commission" DROP NOT NULL;
