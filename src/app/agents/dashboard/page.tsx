@@ -399,26 +399,33 @@ export default function AgentDashboard() {
         const data = await res.json();
         const user = data.user;
         const agent = user.agentProfile;
+        
+        // If user doesn't have an agent profile, redirect to agent registration
+        if (!agent) {
+          router.push("/agent-register");
+          return;
+        }
+        
         setProfile(prev => ({
           ...prev,
           fullName: user.name || "",
-          marnOrLpn: agent.maraNumber || "",
+          marnOrLpn: agent?.maraNumber || "",
           mobile: user.phone || "",
           email: user.email || "",
-          abn: agent.abn || "",
-          businessName: agent.businessName || "",
-          businessEmail: agent.businessEmail || "",
-          languages: (agent.languages || []).join(", "),
-          areasOfPractice: (agent.specializations || []).join(", "),
-          industries: (agent.industries || []).join(", "),
-          officeAddress: agent.businessAddress || "",
-          aboutCompany: agent.bio || "",
+          abn: agent?.abn || "",
+          businessName: agent?.businessName || "",
+          businessEmail: agent?.businessEmail || "",
+          languages: (agent?.languages || []).join(", "),
+          areasOfPractice: (agent?.specializations || []).join(", "),
+          industries: (agent?.industries || []).join(", "),
+          officeAddress: agent?.businessAddress || "",
+          aboutCompany: agent?.bio || "",
           // Add more fields as needed
         }));
         // Set logo and photo previews if available
-        const logoDoc = agent.documents?.find((d: any) => d.type === "businessLogo");
+        const logoDoc = agent?.documents?.find((d: any) => d.type === "businessLogo");
         if (logoDoc) setLogoPreview(logoDoc.url);
-        const photoDoc = agent.documents?.find((d: any) => d.type === "photo");
+        const photoDoc = agent?.documents?.find((d: any) => d.type === "photo");
         if (photoDoc) setPhotoPreview(photoDoc.url);
       }
     }
@@ -583,22 +590,22 @@ export default function AgentDashboard() {
         setProfile(prev => ({
           ...prev,
           fullName: user.name || "",
-          marnOrLpn: agent.maraNumber || "",
+          marnOrLpn: agent?.maraNumber || "",
           mobile: user.phone || "",
           email: user.email || "",
-          abn: agent.abn || "",
-          businessName: agent.businessName || "",
-          businessEmail: agent.businessEmail || "",
-          languages: (agent.languages || []).join(", "),
-          areasOfPractice: (agent.specializations || []).join(", "),
+          abn: agent?.abn || "",
+          businessName: agent?.businessName || "",
+          businessEmail: agent?.businessEmail || "",
+          languages: (agent?.languages || []).join(", "),
+          areasOfPractice: (agent?.specializations || []).join(", "),
           industries: profile.industries, // not in db, keep local
-          officeAddress: agent.businessAddress || "",
-          aboutCompany: agent.bio || "",
+          officeAddress: agent?.businessAddress || "",
+          aboutCompany: agent?.bio || "",
         }));
         // Set logo and photo previews if available
-        const logoDoc = agent.documents?.find((d: any) => d.type === "businessLogo");
+        const logoDoc = agent?.documents?.find((d: any) => d.type === "businessLogo");
         if (logoDoc) setLogoPreview(logoDoc.url);
-        const photoDoc = agent.documents?.find((d: any) => d.type === "photo");
+        const photoDoc = agent?.documents?.find((d: any) => d.type === "photo");
         if (photoDoc) setPhotoPreview(photoDoc.url);
         setFormSuccess('Profile updated successfully!');
       } else {
