@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { CalendarIcon, UserIcon, SettingsIcon, ClockIcon, MapPinIcon, PhoneIcon, MailIcon } from "lucide-react";
+import { CalendarIcon, UserIcon, SettingsIcon, ClockIcon, MapPinIcon, PhoneIcon, MailIcon, SearchIcon, FileTextIcon, CreditCardIcon, MessageSquareIcon, UsersIcon } from "lucide-react";
 import ClientBookingDetailsModal from "@/components/ClientBookingDetailsModal";
 
 interface Booking {
@@ -288,6 +288,66 @@ export default function ClientDashboard() {
                 >
                   <SettingsIcon className="w-5 h-5" />
                   <span className="font-medium">Settings</span>
+                </button>
+                
+                <button
+                  onClick={() => setActiveMainTab('agents')}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors ${
+                    activeMainTab === 'agents' 
+                      ? 'bg-green-50 text-green-700 border border-green-200' 
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <UsersIcon className="w-5 h-5" />
+                  <span className="font-medium">Find Agents</span>
+                </button>
+                
+                <button
+                  onClick={() => setActiveMainTab('cases')}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors ${
+                    activeMainTab === 'cases' 
+                      ? 'bg-green-50 text-green-700 border border-green-200' 
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <FileTextIcon className="w-5 h-5" />
+                  <span className="font-medium">Case Tracking</span>
+                </button>
+                
+                <button
+                  onClick={() => setActiveMainTab('payments')}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors ${
+                    activeMainTab === 'payments' 
+                      ? 'bg-green-50 text-green-700 border border-green-200' 
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <CreditCardIcon className="w-5 h-5" />
+                  <span className="font-medium">Payments</span>
+                </button>
+                
+                <button
+                  onClick={() => setActiveMainTab('resources')}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors ${
+                    activeMainTab === 'resources' 
+                      ? 'bg-green-50 text-green-700 border border-green-200' 
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <FileTextIcon className="w-5 h-5" />
+                  <span className="font-medium">Resources</span>
+                </button>
+                
+                <button
+                  onClick={() => setActiveMainTab('messages')}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors ${
+                    activeMainTab === 'messages' 
+                      ? 'bg-green-50 text-green-700 border border-green-200' 
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <MessageSquareIcon className="w-5 h-5" />
+                  <span className="font-medium">Messages</span>
                 </button>
               </nav>
             </div>
@@ -711,6 +771,586 @@ export default function ClientDashboard() {
                 </div>
               </div>
             )}
+
+            {activeMainTab === 'agents' && (
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Find Immigration Agents</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="mb-6">
+                      <div className="relative">
+                        <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                        <input
+                          type="text"
+                          placeholder="Search agents by name, specialization, or location..."
+                          className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {/* Sample Agent Cards */}
+                      <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                            <UserIcon className="w-6 h-6 text-green-600" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-gray-900">Sarah Johnson</h3>
+                            <p className="text-sm text-gray-600">Immigration Lawyer</p>
+                          </div>
+                        </div>
+                        <div className="space-y-2 mb-4">
+                          <p className="text-sm text-gray-600">
+                            <strong>Specializations:</strong> Skilled Migration, Family Visas
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            <strong>Languages:</strong> English, Spanish
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            <strong>Experience:</strong> 8 years
+                          </p>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1">
+                            <span className="text-yellow-400">★</span>
+                            <span className="text-sm text-gray-600">4.8 (24 reviews)</span>
+                          </div>
+                          <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                            View Profile
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                            <UserIcon className="w-6 h-6 text-blue-600" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-gray-900">Michael Chen</h3>
+                            <p className="text-sm text-gray-600">Registered Migration Agent</p>
+                          </div>
+                        </div>
+                        <div className="space-y-2 mb-4">
+                          <p className="text-sm text-gray-600">
+                            <strong>Specializations:</strong> Business Visas, Student Visas
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            <strong>Languages:</strong> English, Mandarin
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            <strong>Experience:</strong> 12 years
+                          </p>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1">
+                            <span className="text-yellow-400">★</span>
+                            <span className="text-sm text-gray-600">4.9 (31 reviews)</span>
+                          </div>
+                          <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                            View Profile
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                            <UserIcon className="w-6 h-6 text-purple-600" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-gray-900">Emma Rodriguez</h3>
+                            <p className="text-sm text-gray-600">Immigration Consultant</p>
+                          </div>
+                        </div>
+                        <div className="space-y-2 mb-4">
+                          <p className="text-sm text-gray-600">
+                            <strong>Specializations:</strong> Partner Visas, Humanitarian Visas
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            <strong>Languages:</strong> English, Portuguese
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            <strong>Experience:</strong> 6 years
+                          </p>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1">
+                            <span className="text-yellow-400">★</span>
+                            <span className="text-sm text-gray-600">4.7 (18 reviews)</span>
+                          </div>
+                          <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                            View Profile
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {activeMainTab === 'cases' && (
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Case Tracking</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-6">
+                      {/* Active Cases */}
+                      <div>
+                        <h3 className="text-lg font-medium text-gray-900 mb-4">Active Cases</h3>
+                        <div className="space-y-4">
+                          <div className="bg-white border border-gray-200 rounded-lg p-6">
+                            <div className="flex items-center justify-between mb-4">
+                              <div>
+                                <h4 className="font-semibold text-gray-900">Skilled Independent Visa (Subclass 189)</h4>
+                                <p className="text-sm text-gray-600">Case ID: CS-2024-001</p>
+                              </div>
+                              <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                                In Progress
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                              <div>
+                                <p className="text-sm text-gray-600">Agent</p>
+                                <p className="font-medium">Sarah Johnson</p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-gray-600">Started</p>
+                                <p className="font-medium">Jan 15, 2024</p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-gray-600">Estimated Completion</p>
+                                <p className="font-medium">Mar 15, 2024</p>
+                              </div>
+                            </div>
+                            <div className="bg-gray-100 rounded-full h-2 mb-2">
+                              <div className="bg-blue-600 h-2 rounded-full" style={{ width: '65%' }}></div>
+                            </div>
+                            <p className="text-sm text-gray-600">65% Complete - Documents under review</p>
+                          </div>
+
+                          <div className="bg-white border border-gray-200 rounded-lg p-6">
+                            <div className="flex items-center justify-between mb-4">
+                              <div>
+                                <h4 className="font-semibold text-gray-900">Partner Visa (Subclass 820)</h4>
+                                <p className="text-sm text-gray-600">Case ID: CS-2024-002</p>
+                              </div>
+                              <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-medium">
+                                Pending Documents
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                              <div>
+                                <p className="text-sm text-gray-600">Agent</p>
+                                <p className="font-medium">Emma Rodriguez</p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-gray-600">Started</p>
+                                <p className="font-medium">Feb 1, 2024</p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-gray-600">Estimated Completion</p>
+                                <p className="font-medium">May 1, 2024</p>
+                              </div>
+                            </div>
+                            <div className="bg-gray-100 rounded-full h-2 mb-2">
+                              <div className="bg-yellow-500 h-2 rounded-full" style={{ width: '30%' }}></div>
+                            </div>
+                            <p className="text-sm text-gray-600">30% Complete - Awaiting additional documents</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Completed Cases */}
+                      <div>
+                        <h3 className="text-lg font-medium text-gray-900 mb-4">Completed Cases</h3>
+                        <div className="space-y-4">
+                          <div className="bg-white border border-gray-200 rounded-lg p-6">
+                            <div className="flex items-center justify-between mb-4">
+                              <div>
+                                <h4 className="font-semibold text-gray-900">Student Visa (Subclass 500)</h4>
+                                <p className="text-sm text-gray-600">Case ID: CS-2023-015</p>
+                              </div>
+                              <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                                Approved
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              <div>
+                                <p className="text-sm text-gray-600">Agent</p>
+                                <p className="font-medium">Michael Chen</p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-gray-600">Completed</p>
+                                <p className="font-medium">Dec 20, 2023</p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-gray-600">Duration</p>
+                                <p className="font-medium">3 months</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {activeMainTab === 'payments' && (
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Payment History</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-6">
+                      {/* Payment Summary */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                          <div className="flex items-center gap-3">
+                            <CreditCardIcon className="w-8 h-8 text-green-600" />
+                            <div>
+                              <p className="text-sm text-gray-600">Total Paid</p>
+                              <p className="text-2xl font-bold text-green-600">$2,450</p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                          <div className="flex items-center gap-3">
+                            <ClockIcon className="w-8 h-8 text-blue-600" />
+                            <div>
+                              <p className="text-sm text-gray-600">Pending</p>
+                              <p className="text-2xl font-bold text-blue-600">$800</p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                          <div className="flex items-center gap-3">
+                            <CalendarIcon className="w-8 h-8 text-purple-600" />
+                            <div>
+                              <p className="text-sm text-gray-600">This Month</p>
+                              <p className="text-2xl font-bold text-purple-600">$650</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Payment History Table */}
+                      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                        <div className="px-6 py-4 border-b border-gray-200">
+                          <h3 className="text-lg font-medium text-gray-900">Recent Payments</h3>
+                        </div>
+                        <div className="overflow-x-auto">
+                          <table className="w-full">
+                            <thead className="bg-gray-50">
+                              <tr>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  Date
+                                </th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  Description
+                                </th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  Agent
+                                </th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  Amount
+                                </th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  Status
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                              <tr>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                  Mar 15, 2024
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                  Skilled Migration Consultation
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                  Sarah Johnson
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                  $450
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                                    Paid
+                                  </span>
+                                </td>
+                              </tr>
+                              <tr>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                  Mar 10, 2024
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                  Partner Visa Application
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                  Emma Rodriguez
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                  $800
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <span className="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full">
+                                    Pending
+                                  </span>
+                                </td>
+                              </tr>
+                              <tr>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                  Feb 28, 2024
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                  Student Visa Consultation
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                  Michael Chen
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                  $200
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                                    Paid
+                                  </span>
+                                </td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {activeMainTab === 'resources' && (
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Immigration Resources</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-6">
+                      {/* Resource Categories */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                          <div className="flex items-center gap-3 mb-4">
+                            <FileTextIcon className="w-8 h-8 text-blue-600" />
+                            <h3 className="font-semibold text-gray-900">Visa Guides</h3>
+                          </div>
+                          <p className="text-sm text-gray-600 mb-4">
+                            Comprehensive guides for different visa types including requirements, documents, and application processes.
+                          </p>
+                          <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                            View Guides
+                          </Button>
+                        </div>
+
+                        <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                          <div className="flex items-center gap-3 mb-4">
+                            <FileTextIcon className="w-8 h-8 text-green-600" />
+                            <h3 className="font-semibold text-gray-900">Document Templates</h3>
+                          </div>
+                          <p className="text-sm text-gray-600 mb-4">
+                            Ready-to-use templates for common immigration documents and forms.
+                          </p>
+                          <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                            Download Templates
+                          </Button>
+                        </div>
+
+                        <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                          <div className="flex items-center gap-3 mb-4">
+                            <FileTextIcon className="w-8 h-8 text-purple-600" />
+                            <h3 className="font-semibold text-gray-900">Checklists</h3>
+                          </div>
+                          <p className="text-sm text-gray-600 mb-4">
+                            Step-by-step checklists to ensure you have everything ready for your application.
+                          </p>
+                          <Button size="sm" className="bg-purple-600 hover:bg-purple-700">
+                            View Checklists
+                          </Button>
+                        </div>
+
+                        <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                          <div className="flex items-center gap-3 mb-4">
+                            <FileTextIcon className="w-8 h-8 text-orange-600" />
+                            <h3 className="font-semibold text-gray-900">FAQs</h3>
+                          </div>
+                          <p className="text-sm text-gray-600 mb-4">
+                            Frequently asked questions about immigration processes and requirements.
+                          </p>
+                          <Button size="sm" className="bg-orange-600 hover:bg-orange-700">
+                            Read FAQs
+                          </Button>
+                        </div>
+
+                        <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                          <div className="flex items-center gap-3 mb-4">
+                            <FileTextIcon className="w-8 h-8 text-red-600" />
+                            <h3 className="font-semibold text-gray-900">Legal Updates</h3>
+                          </div>
+                          <p className="text-sm text-gray-600 mb-4">
+                            Latest updates on immigration laws, policies, and procedural changes.
+                          </p>
+                          <Button size="sm" className="bg-red-600 hover:bg-red-700">
+                            Read Updates
+                          </Button>
+                        </div>
+
+                        <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                          <div className="flex items-center gap-3 mb-4">
+                            <FileTextIcon className="w-8 h-8 text-indigo-600" />
+                            <h3 className="font-semibold text-gray-900">Success Stories</h3>
+                          </div>
+                          <p className="text-sm text-gray-600 mb-4">
+                            Real stories from clients who successfully obtained their visas.
+                          </p>
+                          <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700">
+                            Read Stories
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {activeMainTab === 'messages' && (
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Messages</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-6">
+                      {/* Message List */}
+                      <div className="space-y-4">
+                        <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                                <UserIcon className="w-5 h-5 text-green-600" />
+                              </div>
+                              <div>
+                                <h4 className="font-semibold text-gray-900">Sarah Johnson</h4>
+                                <p className="text-sm text-gray-600">Immigration Lawyer</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm text-gray-500">2 hours ago</p>
+                              <span className="inline-block w-2 h-2 bg-green-500 rounded-full"></span>
+                            </div>
+                          </div>
+                          <p className="text-sm text-gray-700">
+                            Hi! I've reviewed your documents for the Skilled Migration application. Everything looks good, but we need a few additional documents...
+                          </p>
+                        </div>
+
+                        <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                <UserIcon className="w-5 h-5 text-blue-600" />
+                              </div>
+                              <div>
+                                <h4 className="font-semibold text-gray-900">Michael Chen</h4>
+                                <p className="text-sm text-gray-600">Registered Migration Agent</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm text-gray-500">1 day ago</p>
+                            </div>
+                          </div>
+                          <p className="text-sm text-gray-700">
+                            Your Student Visa application has been submitted successfully. You should receive a confirmation email within 24 hours...
+                          </p>
+                        </div>
+
+                        <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                                <UserIcon className="w-5 h-5 text-purple-600" />
+                              </div>
+                              <div>
+                                <h4 className="font-semibold text-gray-900">Emma Rodriguez</h4>
+                                <p className="text-sm text-gray-600">Immigration Consultant</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm text-gray-500">3 days ago</p>
+                            </div>
+                          </div>
+                          <p className="text-sm text-gray-700">
+                            Great news! Your Partner Visa application has been approved. I'll send you the detailed instructions for the next steps...
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Compose Message */}
+                      <div className="bg-white border border-gray-200 rounded-lg p-6">
+                        <h3 className="text-lg font-medium text-gray-900 mb-4">Send a Message</h3>
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              To
+                            </label>
+                            <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                              <option>Select an agent...</option>
+                              <option>Sarah Johnson - Immigration Lawyer</option>
+                              <option>Michael Chen - Registered Migration Agent</option>
+                              <option>Emma Rodriguez - Immigration Consultant</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Subject
+                            </label>
+                            <input
+                              type="text"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                              placeholder="Enter subject..."
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Message
+                            </label>
+                            <textarea
+                              rows={4}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                              placeholder="Type your message..."
+                            ></textarea>
+                          </div>
+                          <div className="flex justify-end">
+                            <Button className="bg-green-600 hover:bg-green-700">
+                              Send Message
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
           </div>
         </div>
       </div>

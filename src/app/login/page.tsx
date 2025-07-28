@@ -15,7 +15,9 @@ export default function LoginPage() {
   const { data: session, status } = useSession();
 
   useEffect(() => {
-    if ((session?.user as any)?.role === "AGENT") {
+    if ((session?.user as any)?.role === "ADMIN") {
+      router.push("/admin");
+    } else if ((session?.user as any)?.role === "AGENT") {
       router.push("/agents/dashboard");
     } else if ((session?.user as any)?.role === "CLIENT") {
       router.push("/client/dashboard");
@@ -39,7 +41,10 @@ export default function LoginPage() {
     setLoading(false);
     if (res?.ok) {
       setSuccess(true);
-      // The useEffect will handle the redirect
+      // Add a small delay to show success message before redirect
+      setTimeout(() => {
+        // The useEffect will handle the redirect
+      }, 1000);
     } else {
       setError("Invalid email or password.");
     }

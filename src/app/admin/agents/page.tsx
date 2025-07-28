@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 interface Document {
   id: string;
@@ -34,22 +36,32 @@ const statusOptions = [
   { label: "Suspended", value: "SUSPENDED" },
 ];
 
-function Navbar() {
+function AdminNavbar() {
+  const { data: session } = useSession();
+  const router = useRouter();
+
   return (
     <nav className="flex items-center justify-between px-8 py-4 border-b bg-white dark:bg-gray-900 shadow-sm sticky top-0 z-10">
       <div className="flex items-center gap-8">
         <span className="text-2xl font-extrabold text-green-600 tracking-tight">MaraPlace Admin</span>
         <div className="hidden md:flex gap-4 text-sm text-gray-700 dark:text-gray-200">
-          <Link href="/" className="hover:text-green-600">Home</Link>
-          <Link href="/admin/agents" className="hover:text-green-600">Agents</Link>
+          <Link href="/admin" className="hover:text-green-600">Dashboard</Link>
+          <Link href="/admin/users" className="hover:text-green-600">Users</Link>
+          <Link href="/admin/agents" className="hover:text-green-600 font-medium">Agents</Link>
+          <Link href="/admin/verifications" className="hover:text-green-600">Verifications</Link>
+          <Link href="/admin/payments" className="hover:text-green-600">Payments</Link>
+          <Link href="/admin/disputes" className="hover:text-green-600">Disputes</Link>
         </div>
       </div>
       <div className="flex items-center gap-4">
-        <Button asChild variant="outline">
-          <Link href="/login">Login</Link>
-        </Button>
-        <Button asChild>
-          <Link href="/signup">Sign Up</Link>
+        <span className="text-sm text-gray-600">
+          Welcome, {session?.user?.name || 'Admin'}
+        </span>
+        <Button 
+          variant="outline" 
+          asChild
+        >
+          <Link href="/">Back to Site</Link>
         </Button>
       </div>
     </nav>
@@ -74,6 +86,8 @@ function Footer() {
 }
 
 export default function AdminAgents() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -84,18 +98,35 @@ export default function AdminAgents() {
   const [editForm, setEditForm] = useState<any>({});
 
   useEffect(() => {
-    setLoading(true);
-    fetch(`/api/agents?limit=100${statusFilter ? `&status=${statusFilter}` : ""}`)
-      .then(res => res.json())
-      .then(data => {
-        setAgents(data.agents || []);
-        setLoading(false);
-      })
-      .catch(() => {
-        setError("Failed to load agents");
-        setLoading(false);
-      });
-  }, [statusFilter]);
+    // Check if user is admin
+    if (status === "loading") return;
+    
+    if (!session || (session.user as any)?.role !== "ADMIN") {
+      router.push("/login");
+      return;
+    }
+
+    // Only fetch data if we have a valid admin session
+    if (session && (session.user as any)?.role === "ADMIN") {
+      setLoading(true);
+      fetch(`/api/admin/agents?limit=100${statusFilter ? `&status=${statusFilter}` : ""}`)
+        .then(res => {
+          if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+          }
+          return res.json();
+        })
+        .then(data => {
+          setAgents(data.agents || []);
+          setLoading(false);
+        })
+        .catch((error) => {
+          console.error("Failed to load agents:", error);
+          setError("Failed to load agents");
+          setLoading(false);
+        });
+    }
+  }, [session, status, router, statusFilter]);
 
   async function updateStatus(id: string, status: string) {
     let suspendReason = undefined;
@@ -107,7 +138,7 @@ export default function AdminAgents() {
       }
     }
     setActionLoading(id + status);
-    const res = await fetch(`/api/agents/${id}`, {
+    const res = await fetch(`/api/admin/agents/${id}/status`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status, suspendReason }),
@@ -178,9 +209,27 @@ export default function AdminAgents() {
     setActionLoading(null);
   }
 
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <AdminNavbar />
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+            <p>Loading admin panel...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!session || (session.user as any)?.role !== "ADMIN") {
+    return null; // Will redirect to login
+  }
+
   return (
     <div>
-      <Navbar />
+      <AdminNavbar />
       <div className="max-w-5xl mx-auto py-12 px-4">
         <h1 className="text-2xl font-bold mb-6">Agent Management</h1>
         <div className="mb-4 flex gap-2 items-center">

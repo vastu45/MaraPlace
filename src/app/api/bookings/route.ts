@@ -1,14 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     console.log('Session:', session);
+    console.log('Session user:', session?.user);
+    console.log('Session user email:', session?.user?.email);
+    console.log('Request headers:', Object.fromEntries(request.headers.entries()));
     
     if (!session?.user?.email) {
+      console.log('Authentication failed: No session or no user email');
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
@@ -216,95 +220,5 @@ export async function PATCH(request: NextRequest) {
   } catch (error) {
     console.error('Error marking bookings as seen:', error);
     return NextResponse.json({ error: 'Failed to mark bookings as seen' }, { status: 500 });
-  }
-}
-
-
-
-export async function GET(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-    }
-
-    const { searchParams } = new URL(request.url);
-    const status = searchParams.get('status');
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '10');
-    const skip = (page - 1) * limit;
-
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-
-    // Build where clause
-    const where: any = {};
-    
-    if (user.role === 'CLIENT') {
-      where.clientId = user.id;
-    } else if (user.role === 'AGENT') {
-      const agentProfile = await prisma.agentProfile.findUnique({
-        where: { userId: user.id },
-      });
-      if (agentProfile) {
-        where.agentId = agentProfile.id;
-      }
-    }
-
-    if (status) {
-      where.status = status;
-    }
-
-    const [bookings, total] = await Promise.all([
-      prisma.booking.findMany({
-        where,
-        include: {
-          client: {
-            select: {
-              name: true,
-              email: true,
-            }
-          },
-          agent: {
-            include: {
-              user: {
-                select: {
-                  name: true,
-                  email: true,
-                }
-              }
-            }
-          },
-          service: true,
-        },
-        orderBy: {
-          date: 'desc',
-        },
-        skip,
-        take: limit,
-      }),
-      prisma.booking.count({ where })
-    ]);
-    // Add seenByAgent to returned bookings
-    const bookingsWithSeen = bookings.map(b => ({ ...b, seenByAgent: b.seenByAgent }));
-    return NextResponse.json({
-      bookings: bookingsWithSeen,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit),
-      }
-    });
-
-  } catch (error) {
-    console.error('Error fetching bookings:', error);
-    return NextResponse.json({ error: 'Failed to fetch bookings' }, { status: 500 });
   }
 } 

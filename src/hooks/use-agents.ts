@@ -32,17 +32,34 @@ export function useAgents() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setLoading(true);
-    fetch("/api/agents?limit=20")
-      .then((res) => res.json())
-      .then((data) => {
-        setAgents(data.agents || []);
+    const fetchAgents = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const response = await fetch("/api/agents?limit=20");
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.agents && Array.isArray(data.agents)) {
+          setAgents(data.agents);
+        } else {
+          console.error('Invalid agents data structure:', data);
+          setError("Invalid data structure received");
+        }
+      } catch (err) {
+        console.error('Error fetching agents:', err);
+        setError(err instanceof Error ? err.message : "Failed to fetch agents");
+      } finally {
         setLoading(false);
-      })
-      .catch((err) => {
-        setError("Failed to fetch agents");
-        setLoading(false);
-      });
+      }
+    };
+
+    fetchAgents();
   }, []);
 
   return { agents, loading, error };

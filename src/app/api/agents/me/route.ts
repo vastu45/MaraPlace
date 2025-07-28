@@ -10,10 +10,10 @@ const prisma = new PrismaClient();
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  }
 
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
@@ -39,10 +39,10 @@ export async function GET() {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  }
 
     const formData = await request.formData();
     const user = await prisma.user.findUnique({
@@ -52,7 +52,7 @@ export async function PATCH(request: NextRequest) {
           include: {
             documents: true,
           },
-        },
+      },
       },
     });
 
@@ -149,7 +149,7 @@ export async function PATCH(request: NextRequest) {
       const uploadDir = path.join(process.cwd(), "public", "uploads");
       if (!existsSync(uploadDir)) {
         mkdirSync(uploadDir, { recursive: true });
-      }
+    }
       const filename = `logo_${user.id}_${Date.now()}.jpg`;
       const filepath = path.join(uploadDir, filename);
       await writeFile(filepath, buffer);
@@ -176,7 +176,7 @@ export async function PATCH(request: NextRequest) {
         await prisma.agentProfile.update({
           where: { id: user.agentProfile.id },
           data: agentData,
-        });
+      });
       } else {
         await prisma.agentProfile.create({
           data: {

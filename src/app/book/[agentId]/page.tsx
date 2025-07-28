@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { format, addMinutes } from "date-fns";
 import BookingCalendar from "@/components/BookingCalendar";
 import { Button } from "@/components/ui/button";
@@ -35,6 +36,7 @@ interface Service {
 export default function BookingPage() {
   const params = useParams();
   const router = useRouter();
+  const { data: session, status } = useSession();
   const agentId = params.agentId as string;
   
   const [agent, setAgent] = useState<Agent | null>(null);
@@ -125,6 +127,15 @@ export default function BookingPage() {
 
   const handleBooking = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check if user is authenticated
+    if (!session?.user) {
+      setFormError("Please log in to book an appointment");
+      // Redirect to login with return URL
+      router.push(`/login?callbackUrl=${encodeURIComponent(window.location.href)}`);
+      return;
+    }
+    
     if (!selectedDate || !selectedTime) {
       setFormError("Please select a date and time");
       return;
@@ -137,6 +148,7 @@ export default function BookingPage() {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({
           agentId,
           serviceId: selectedService ? selectedService.id : null,
@@ -306,7 +318,23 @@ export default function BookingPage() {
 
             {/* Right Column - Calendar & Booking Form */}
             <div className="lg:col-span-2">
-              {!showBookingForm ? (
+              {!session?.user ? (
+                <div className="bg-white rounded-lg shadow-md p-6 text-center">
+                  <div className="mb-4">
+                    <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Login Required</h3>
+                    <p className="text-gray-600 mb-4">Please log in to book an appointment with this agent.</p>
+                    <Button 
+                      onClick={() => router.push(`/login?callbackUrl=${encodeURIComponent(window.location.href)}`)}
+                      className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg"
+                    >
+                      Log In to Book
+                    </Button>
+                  </div>
+                </div>
+              ) : !showBookingForm ? (
                 <BookingCalendar
                   agentId={agentId}
                   serviceId={selectedService?.id}

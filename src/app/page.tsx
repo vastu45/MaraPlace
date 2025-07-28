@@ -44,13 +44,13 @@ function Navbar() {
             {dropdownOpen && (
               <div className="absolute right-0 mt-2 w-40 bg-white border rounded shadow-lg z-20">
                 {(session.user as any)?.role === "AGENT" ? (
-                  <Link
-                    href="/profile"
-                    className="block px-4 py-2 text-gray-700 hover:bg-green-50"
-                    onClick={() => setDropdownOpen(false)}
-                  >
-                    Edit Profile
-                  </Link>
+                <Link
+                  href="/profile"
+                  className="block px-4 py-2 text-gray-700 hover:bg-green-50"
+                  onClick={() => setDropdownOpen(false)}
+                >
+                  Edit Profile
+                </Link>
                 ) : (
                   <Link
                     href="/client/dashboard"
@@ -128,54 +128,54 @@ function Hero({ onSearch }: { onSearch: (filters: any) => void }) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex items-center bg-white rounded-xl px-4 py-3">
                     <span className="text-green-600 mr-3 text-lg">🔍</span>
-                    <input
+          <input
                       className="outline-none w-full bg-transparent text-gray-900 placeholder-gray-500"
                       placeholder="Search specialists..."
-                      name="keyword"
-                      value={filters.keyword}
-                      onChange={handleChange}
-                    />
-                  </div>
+            name="keyword"
+            value={filters.keyword}
+            onChange={handleChange}
+          />
+        </div>
                   <div className="flex items-center bg-white rounded-xl px-4 py-3">
                     <span className="text-green-600 mr-3 text-lg">🇦🇺</span>
-                    <input
+          <input
                       className="outline-none w-full bg-transparent text-gray-900 placeholder-gray-500"
-                      placeholder="Location"
-                      name="location"
-                      value={filters.location}
-                      onChange={handleChange}
-                    />
-                  </div>
+            placeholder="Location"
+            name="location"
+            value={filters.location}
+            onChange={handleChange}
+          />
+        </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex items-center bg-white rounded-xl px-4 py-3">
                     <span className="text-green-600 mr-3 text-lg">📚</span>
-                    <select
+          <select
                       className="outline-none w-full bg-transparent text-gray-900"
-                      name="area"
-                      value={filters.area}
-                      onChange={handleChange}
-                    >
+            name="area"
+            value={filters.area}
+            onChange={handleChange}
+          >
                       <option value="" className="text-gray-500">Area of Practice</option>
                       <option value="visa" className="text-gray-900">Visa</option>
                       <option value="appeals" className="text-gray-900">Appeals</option>
                       <option value="citizenship" className="text-gray-900">Citizenship</option>
-                    </select>
-                  </div>
+          </select>
+        </div>
                   <div className="flex items-center bg-white rounded-xl px-4 py-3">
                     <span className="text-green-600 mr-3 text-lg">🏢</span>
-                    <select
+          <select
                       className="outline-none w-full bg-transparent text-gray-900"
-                      name="industry"
-                      value={filters.industry}
-                      onChange={handleChange}
-                    >
+            name="industry"
+            value={filters.industry}
+            onChange={handleChange}
+          >
                       <option value="" className="text-gray-500">Select Industry</option>
                       <option value="education" className="text-gray-900">Education</option>
                       <option value="business" className="text-gray-900">Business</option>
                       <option value="family" className="text-gray-900">Family</option>
-                    </select>
-                  </div>
+          </select>
+        </div>
                 </div>
                 <button 
                   type="submit" 
@@ -183,8 +183,8 @@ function Hero({ onSearch }: { onSearch: (filters: any) => void }) {
                 >
                   <span className="mr-2">🔍</span>
                   Search specialists
-                </button>
-              </form>
+        </button>
+      </form>
             </div>
           </div>
 
@@ -1047,7 +1047,7 @@ function AgentCard({ agent }: { agent: any }) {
       {/* Profile Photo */}
       <div className="relative mb-6">
         <div className="w-32 h-32 rounded-full bg-gradient-to-br from-green-100 to-emerald-100 border-4 border-white shadow-xl flex items-center justify-center overflow-hidden">
-          <img src={photoUrl} alt="Profile" className="object-cover w-full h-full" />
+        <img src={photoUrl} alt="Profile" className="object-cover w-full h-full" />
         </div>
         {/* Online Status Indicator */}
         <div className="absolute bottom-2 right-2 w-4 h-4 bg-green-500 border-2 border-white rounded-full shadow-lg"></div>
@@ -1078,7 +1078,7 @@ function AgentCard({ agent }: { agent: any }) {
       {/* Business Logo */}
       <div className="mb-6 p-3 bg-gray-50 rounded-2xl border border-gray-100">
         <div className="w-16 h-16 rounded-xl bg-white border border-gray-200 flex items-center justify-center overflow-hidden shadow-sm">
-          <img src={logoUrl} alt="Business Logo" className="object-contain w-full h-full" />
+        <img src={logoUrl} alt="Business Logo" className="object-contain w-full h-full" />
         </div>
       </div>
       
@@ -1121,16 +1121,18 @@ export default function Home() {
       <Hero onSearch={setSearch} />
       <Categories />
       <main id="agents" className="py-10 px-4 max-w-6xl mx-auto">
-        <h2 className="text-3xl font-bold mb-32 text-center">Featured Mara Agents</h2>
-        {/* Add extra margin below heading to prevent overlap */}
-        <div className="mb-8" />
+        <h2 className="text-3xl font-bold mb-8 text-center">Featured Mara Agents</h2>
+        
         {loading && <div className="text-center">Loading agents...</div>}
         {error && <div className="text-center text-red-500">{error}</div>}
+        
+        {/* Agents Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
           {filteredAgents.map((agent) => (
             <AgentCard key={agent.id} agent={agent} />
           ))}
         </div>
+        
         {(!loading && filteredAgents.length === 0) && <div className="text-center">No agents found.</div>}
       </main>
       <Testimonials />
