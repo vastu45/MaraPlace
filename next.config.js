@@ -16,6 +16,11 @@ const nextConfig = {
   compiler: {
     removeConsole: false,
   },
+  webpack: (config, { isServer }) => {
+    // Disable SWC minification
+    config.optimization.minimize = false;
+    return config;
+  },
 }
 
 module.exports = nextConfig 

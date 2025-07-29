@@ -8,4 +8,8 @@ cmds = ["npm install --legacy-peer-deps --no-optional"]
 cmds = ["npm run build"]
 
 [start]
-cmd = "npm start" 
+cmd = "npm start"
+
+[env]
+NODE_ENV = "production"
+NEXT_TELEMETRY_DISABLED = "1" 
