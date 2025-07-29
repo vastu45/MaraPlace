@@ -1,17 +1,9 @@
 {
-  "buildCommand": "npm run build",
-  "devCommand": "npm run dev",
-  "installCommand": "npm install",
   "framework": "nextjs",
   "regions": ["syd1"],
   "functions": {
     "src/app/api/**/*.ts": {
       "maxDuration": 30
-    }
-  },
-  "build": {
-    "env": {
-      "NEXTAUTH_URL": "https://maraplace.vercel.app"
     }
   }
 } 
