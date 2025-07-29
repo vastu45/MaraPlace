@@ -1124,7 +1124,12 @@ export default function Home() {
         <h2 className="text-3xl font-bold mb-8 text-center">Featured Mara Agents</h2>
         
         {loading && <div className="text-center">Loading agents...</div>}
-        {error && <div className="text-center text-red-500">{error}</div>}
+        {error && (
+          <div className="text-center text-red-500">
+            <p>Error loading agents: {error}</p>
+            <p className="text-sm mt-2">This is normal for a new deployment. Please try refreshing the page.</p>
+          </div>
+        )}
         
         {/* Agents Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
@@ -1133,7 +1138,7 @@ export default function Home() {
           ))}
         </div>
         
-        {(!loading && filteredAgents.length === 0) && <div className="text-center">No agents found.</div>}
+        {(!loading && filteredAgents.length === 0 && !error) && <div className="text-center">No agents found.</div>}
       </main>
       <Testimonials />
       <HowItWorks />
