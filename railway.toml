@@ -16,4 +16,4 @@ nixPkgs = ["nodejs_20", "postgresql_15"]
 cmds = ["npm install --legacy-peer-deps --no-optional"]
 
 [phases.build]
-cmds = ["npm run build"] 
+cmds = ["rm -rf .next tsconfig.tsbuildinfo", "npm run build"] 
