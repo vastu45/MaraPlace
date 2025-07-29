@@ -16,24 +16,6 @@ const nextConfig = {
   compiler: {
     removeConsole: false,
   },
-  webpack: (config, { isServer }) => {
-    // Disable SWC minification and other optimizations
-    config.optimization.minimize = false;
-    config.optimization.minimizer = [];
-    
-    // Disable SWC loader
-    config.module.rules.forEach((rule) => {
-      if (rule.use && Array.isArray(rule.use)) {
-        rule.use.forEach((use) => {
-          if (use.loader && use.loader.includes('swc')) {
-            use.loader = 'babel-loader';
-          }
-        });
-      }
-    });
-    
-    return config;
-  },
   env: {
     NEXT_SWC_DISABLE: '1',
   },
