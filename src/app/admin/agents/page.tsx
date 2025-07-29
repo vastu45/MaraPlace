@@ -455,4 +455,6 @@ export default function AdminAgents() {
       <Footer />
     </div>
   );
-} 
+}
+
+export const dynamic = 'force-dynamic'; 

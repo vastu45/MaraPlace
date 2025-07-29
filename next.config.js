@@ -24,6 +24,8 @@ const nextConfig = {
   env: {
     NEXT_SWC_DISABLE: '1',
   },
+  output: 'standalone',
+  trailingSlash: false,
 }
 
 module.exports = nextConfig 

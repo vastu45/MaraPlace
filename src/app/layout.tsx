@@ -1,23 +1,16 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
+import { AuthProvider } from '@/components/auth-provider'
 import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster } from '@/components/ui/toaster'
-import { AuthProvider } from '@/components/auth-provider'
 
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'MaraPlace - Migration Agent Marketplace',
-  description: 'Find and book trusted migration agents in Australia. Connect with MARA registered agents for visa applications, appeals, and immigration services.',
-  keywords: 'migration agent, visa, immigration, Australia, MARA, booking, consultation',
-  authors: [{ name: 'MaraPlace Team' }],
-  openGraph: {
-    title: 'MaraPlace - Migration Agent Marketplace',
-    description: 'Find and book trusted migration agents in Australia',
-    type: 'website',
-    locale: 'en_AU',
-  },
+  title: 'MaraPlace',
+  description: 'Connect with immigration agents and lawyers',
+  metadataBase: new URL(process.env.NEXTAUTH_URL || 'http://localhost:3000'),
 }
 
 export default function RootLayout({
@@ -26,7 +19,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en">
       <body className={inter.className}>
         <ThemeProvider
           attribute="class"
