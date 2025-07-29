@@ -12,8 +12,6 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  // Force static generation for all pages
-  trailingSlash: true,
 }
 
 module.exports = nextConfig 
