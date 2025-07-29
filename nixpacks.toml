@@ -2,7 +2,7 @@
 nixPkgs = ["nodejs_20", "postgresql_15"]
 
 [phases.install]
-cmds = ["npm ci --only=production"]
+cmds = ["npm install --legacy-peer-deps --no-optional"]
 
 [phases.build]
 cmds = ["npm run build"]
