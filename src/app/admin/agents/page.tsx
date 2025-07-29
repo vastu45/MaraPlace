@@ -38,7 +38,6 @@ const statusOptions = [
 
 function AdminNavbar() {
   const { data: session } = useSession();
-  const router = useRouter();
 
   return (
     <nav className="flex items-center justify-between px-8 py-4 border-b bg-white dark:bg-gray-900 shadow-sm sticky top-0 z-10">
@@ -87,7 +86,6 @@ function Footer() {
 
 export default function AdminAgents() {
   const { data: session, status } = useSession();
-  const router = useRouter();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

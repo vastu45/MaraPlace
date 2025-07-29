@@ -20,6 +20,8 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  // Force dynamic rendering for all API routes
+  output: 'standalone',
 }
 
 module.exports = nextConfig 

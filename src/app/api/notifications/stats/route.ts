@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getConnectionStats } from "@/lib/notifications";
 
 export async function GET(request: NextRequest) {
+export const dynamic = 'force-dynamic';
   try {
     const stats = getConnectionStats();
     
