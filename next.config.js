@@ -21,6 +21,9 @@ const nextConfig = {
     config.optimization.minimize = false;
     return config;
   },
+  env: {
+    NEXT_SWC_DISABLE: '1',
+  },
 }
 
 module.exports = nextConfig 

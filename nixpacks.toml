@@ -5,7 +5,7 @@ nixPkgs = ["nodejs_20", "postgresql_15"]
 cmds = ["npm install --legacy-peer-deps --no-optional"]
 
 [phases.build]
-cmds = ["npm run build"]
+cmds = ["chmod +x build-railway.sh", "./build-railway.sh"]
 
 [start]
 cmd = "npm start"
