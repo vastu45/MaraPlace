@@ -11,7 +11,7 @@
   },
   "build": {
     "env": {
-      "NEXTAUTH_URL": "https://maraplace.vercel.app"
+      "NEXTAUTH_URL": "https://mara-place.vercel.app"
     }
   }
 }
