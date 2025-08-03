@@ -86,6 +86,7 @@ function Footer() {
 
 export default function AdminAgents() {
   const { data: session, status } = useSession();
+  const router = useRouter();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
