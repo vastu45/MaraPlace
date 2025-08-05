@@ -24,6 +24,7 @@ export interface Agent {
   services?: any[];
   recentReviews?: any[];
   documents?: any[];
+  status?: string;
 }
 
 export function useAgents() {
@@ -37,23 +38,29 @@ export function useAgents() {
         setLoading(true);
         setError(null);
         
+        console.log('Fetching agents from database...');
         const response = await fetch("/api/agents?limit=20");
         
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+          const errorText = await response.text();
+          console.error('API Error:', response.status, errorText);
+          throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
         }
         
         const data = await response.json();
+        console.log('API Response:', data);
         
         if (data.agents && Array.isArray(data.agents)) {
+          console.log(`Found ${data.agents.length} agents in database`);
           setAgents(data.agents);
         } else {
           console.error('Invalid agents data structure:', data);
-          setError("Invalid data structure received");
+          setAgents([]); // Set empty array instead of error
         }
       } catch (err) {
         console.error('Error fetching agents:', err);
         setError(err instanceof Error ? err.message : "Failed to fetch agents");
+        setAgents([]); // Set empty array on error
       } finally {
         setLoading(false);
       }

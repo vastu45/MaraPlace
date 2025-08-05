@@ -23,6 +23,15 @@ async function saveFile(file: File | null, type: string, uploadsDir: string, sav
 
 export async function GET(request: NextRequest) {
   try {
+    // Check if database is connected
+    if (!process.env.DATABASE_URL) {
+      console.error('DATABASE_URL not found in environment variables');
+      return NextResponse.json(
+        { error: 'Database configuration not found' },
+        { status: 500 }
+      );
+    }
+
     const { searchParams } = new URL(request.url)
     
     // Extract query parameters
@@ -80,6 +89,17 @@ export async function GET(request: NextRequest) {
         { hourlyRate: { lte: parseFloat(maxPrice) } },
         { consultationFee: { lte: parseFloat(maxPrice) } }
       ]
+    }
+
+    // Test database connection first
+    try {
+      await prisma.$connect();
+    } catch (connectionError) {
+      console.error('Database connection failed:', connectionError);
+      return NextResponse.json(
+        { error: 'Database connection failed' },
+        { status: 500 }
+      );
     }
 
     // Fetch agents with pagination
@@ -183,9 +203,15 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching agents:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch agents' },
+      { error: 'Failed to fetch agents', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
+  } finally {
+    try {
+      await prisma.$disconnect();
+    } catch (disconnectError) {
+      console.error('Error disconnecting from database:', disconnectError);
+    }
   }
 } 
 

@@ -46,6 +46,7 @@ function AdminNavbar() {
           <Link href="/admin/verifications" className="hover:text-green-600">Verifications</Link>
           <Link href="/admin/payments" className="hover:text-green-600">Payments</Link>
           <Link href="/admin/disputes" className="hover:text-green-600">Disputes</Link>
+          <Link href="/admin/theme" className="hover:text-green-600">Theme</Link>
         </div>
       </div>
       <div className="flex items-center gap-4">
@@ -290,6 +291,23 @@ export default function AdminDashboard() {
                   View business metrics, generate reports, and track platform performance.
                 </p>
                 <Button className="w-full">View Analytics</Button>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/admin/theme" className="block">
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="h-5 w-5" />
+                  Theme Customization
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-600 mb-4">
+                  Customize colors, fonts, and styling to match your brand identity.
+                </p>
+                <Button className="w-full">Customize Theme</Button>
               </CardContent>
             </Card>
           </Link>
