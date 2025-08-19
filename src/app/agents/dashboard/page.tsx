@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
+import { useSession, signOut } from "next-auth/react";
+import Link from "next/link";
 
 import { BellIcon, DocumentIcon, QuestionMarkCircleIcon, CalendarIcon, UsersIcon, ChartBarIcon, Cog6ToothIcon, CreditCardIcon, ClipboardDocumentListIcon, HomeIcon, FolderIcon, PencilSquareIcon } from "@heroicons/react/24/outline";
 import { CameraIcon } from "@heroicons/react/24/solid";
@@ -31,6 +33,30 @@ const secondaryLinks = [
 ];
 
 export default function AgentDashboard() {
+  const { data: session, status } = useSession();
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const profileDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Debug session status
+  useEffect(() => {
+    console.log('Session status:', status);
+    console.log('Session data:', session);
+  }, [session, status]);
+
+  // Close profile dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target as Node)) {
+        setProfileDropdownOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   // Enhanced stats with more detailed information - will be defined after consultations state
 
 
@@ -349,6 +375,83 @@ export default function AgentDashboard() {
     setSelectedBookingId("");
   };
 
+  const handleQuickConfirm = async (bookingId: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent opening the modal
+    try {
+      const response = await fetch(`/api/bookings/${bookingId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          status: 'CONFIRMED',
+        }),
+      });
+      
+      if (response.ok) {
+        // Refresh consultations to show updated status
+        fetchConsultations();
+      } else {
+        console.error('Failed to confirm booking');
+      }
+    } catch (error) {
+      console.error('Error confirming booking:', error);
+    }
+  };
+
+  const handleQuickReject = async (bookingId: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent opening the modal
+    try {
+      const response = await fetch(`/api/bookings/${bookingId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          status: 'CANCELLED',
+        }),
+      });
+      
+      if (response.ok) {
+        // Refresh consultations to show updated status
+        fetchConsultations();
+      } else {
+        console.error('Failed to reject booking');
+      }
+    } catch (error) {
+      console.error('Error rejecting booking:', error);
+    }
+  };
+
+  const handleLogout = async () => {
+    console.log('Logout function called');
+    setProfileDropdownOpen(false);
+    
+    try {
+      // Call the NextAuth signOut API directly
+      const response = await fetch('/api/auth/signout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        console.log('SignOut API call successful');
+        // Redirect to home page
+        window.location.href = '/';
+      } else {
+        console.error('SignOut API call failed');
+        // Fallback: redirect to login page
+        window.location.href = '/login';
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Fallback: redirect to login page
+      window.location.href = '/login';
+    }
+  };
+
   // Notification system for new bookings
   const [unreadBookingsCount, setUnreadBookingsCount] = useState(0);
   const [hasSeenConsultations, setHasSeenConsultations] = useState(false);
@@ -620,15 +723,15 @@ export default function AgentDashboard() {
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <ToastContainer toasts={toasts} onRemoveToast={removeToast} />
       <div className="flex flex-1 min-h-0">
-        {/* Dark Green Sidebar */}
-        <aside className="hidden md:flex flex-col w-64 bg-green-900 text-white py-8 px-4 min-h-full">
+        {/* Modern Purple Sidebar */}
+        <aside className="hidden md:flex flex-col w-64 bg-gradient-to-b from-purple-900 via-purple-800 to-purple-900 text-white py-8 px-4 min-h-full shadow-xl">
           <div className="mb-8 flex flex-col items-start gap-1">
             <div className="flex items-center gap-2 w-full">
               <span className="flex items-center gap-2">
-                <span className="rounded-full bg-white p-2"><HomeIcon className="w-7 h-7 text-green-900" /></span>
+                <span className="rounded-full bg-white p-2 shadow-lg"><HomeIcon className="w-7 h-7 text-purple-900" /></span>
                 <div>
                   <div className="font-bold text-lg leading-tight text-white">MaraPlace</div>
-                  <div className="text-xs text-green-200">Agent dashboard</div>
+                  <div className="text-xs text-purple-200">Agent dashboard</div>
                 </div>
               </span>
             </div>
@@ -641,19 +744,19 @@ export default function AgentDashboard() {
                   <div key={link.label}>
                     <button
                       type="button"
-                      className={`flex items-center gap-3 px-3 py-2 rounded-lg w-full font-medium ${isOpen ? 'bg-green-700 text-white' : 'text-green-200 hover:bg-green-800 hover:text-white transition'}`}
+                      className={`flex items-center gap-3 px-3 py-2 rounded-lg w-full font-medium transition-all duration-200 ${isOpen ? 'bg-purple-700 text-white shadow-lg' : 'text-purple-200 hover:bg-purple-800 hover:text-white hover:shadow-md'}`}
                       onClick={() => setOpenSubMenu(isOpen ? null : link.label)}
                     >
                       {link.icon} <span>{link.label}</span>
                     </button>
                     {isOpen && (
-                      <div className="ml-7 border-l border-green-700 pl-3 py-1 space-y-1">
+                      <div className="ml-7 border-l border-purple-700 pl-3 py-1 space-y-1">
                         {link.submenu.map((sublink) => {
                           const isActive = activeSubMenu === sublink.label;
                           return (
                             <button
                               key={sublink.label}
-                              className={`flex items-center gap-2 py-1 w-full text-left rounded ${isActive ? 'bg-green-700 text-white font-semibold' : 'text-green-200 hover:text-white'}`}
+                              className={`flex items-center gap-2 py-1 w-full text-left rounded transition-all duration-200 ${isActive ? 'bg-purple-700 text-white font-semibold shadow-md' : 'text-purple-200 hover:text-white hover:bg-purple-800'}`}
                               onClick={() => {
                                 setActiveSubMenu(sublink.label);
                                 if (sublink.label === 'Edit Profile') {
@@ -675,7 +778,7 @@ export default function AgentDashboard() {
               return (
                 <button
                   key={link.label}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-lg transition font-medium w-full text-left ${activeMainTab === link.tab ? 'bg-green-700 text-white' : 'text-green-200 hover:bg-green-800 hover:text-white'}`}
+                  className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 font-medium w-full text-left ${activeMainTab === link.tab ? 'bg-purple-700 text-white shadow-lg' : 'text-purple-200 hover:bg-purple-800 hover:text-white hover:shadow-md'}`}
                   onClick={() => {
                     if (link.tab === 'consultations') {
                       handleConsultationsTabClick();
@@ -686,7 +789,7 @@ export default function AgentDashboard() {
                 >
                   {link.icon} <span>{link.label}</span>
                   {link.tab === 'consultations' && unreadBookingsCount > 0 && (
-                    <div className="ml-auto bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
+                    <div className="ml-auto bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium animate-pulse">
                       {unreadBookingsCount}
                     </div>
                   )}
@@ -694,188 +797,279 @@ export default function AgentDashboard() {
               );
             })}
           </nav>
-          <div className="my-4 border-t border-green-700" />
+          <div className="my-4 border-t border-purple-700" />
           <nav className="space-y-1 mb-4">
             {secondaryLinks.filter(link => link.label !== "Notification").map(link => (
-              <a key={link.label} href="#" className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-green-800 transition font-medium text-green-200 hover:text-white relative">
+              <a key={link.label} href="#" className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-purple-800 transition-all duration-200 font-medium text-purple-200 hover:text-white relative hover:shadow-md">
                 {link.icon} <span>{link.label}</span>
               </a>
             ))}
           </nav>
           <div className="mt-auto flex flex-col items-center pt-8">
-            <div className="w-14 h-14 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-semibold mb-2">
+            <div className="w-14 h-14 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold mb-2 shadow-lg">
               {profile.fullName ? profile.fullName.charAt(0) : 'A'}
             </div>
             <div className="font-semibold text-white">{profile.fullName || 'Agent Name'}</div>
-            <div className="text-xs text-green-200">Online</div>
+            <div className="text-xs text-purple-200 flex items-center gap-1">
+              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+              Online
+            </div>
           </div>
         </aside>
 
         {/* Main Content Area */}
-        <main className="flex-1 bg-gray-100 p-6 overflow-auto">
-          {/* Top Bar - Removed search bar */}
-          <div className="flex items-center justify-end mb-6">
-            <div className="flex items-center gap-3">
-              <button className="relative p-1.5 text-gray-600 hover:text-gray-900">
-                <BellIcon className="w-5 h-5" />
-                {unreadBookingsCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-4 h-4 rounded-full flex items-center justify-center">
-                    {unreadBookingsCount}
-                  </span>
+        <main className="flex-1 bg-gradient-to-br from-gray-50 to-gray-100 p-6 overflow-auto">
+          {/* Modern Top Bar */}
+          <div className="flex items-center justify-between mb-8 bg-white rounded-xl shadow-sm p-4">
+            <div className="flex items-center gap-4">
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                Dashboard
+              </h1>
+            </div>
+                          <div className="flex items-center gap-4">
+                {/* Temporary test logout button */}
+                <button 
+                  onClick={handleLogout}
+                  className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700"
+                >
+                  Test Logout
+                </button>
+                <button className="relative p-2 text-gray-600 hover:text-purple-600 transition-colors duration-200 hover:bg-purple-50 rounded-lg">
+                  <BellIcon className="w-5 h-5" />
+                  {unreadBookingsCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center animate-pulse">
+                      {unreadBookingsCount}
+                    </span>
+                  )}
+                </button>
+              <div className="relative" ref={profileDropdownRef}>
+                <button
+                  onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+                  className="flex items-center gap-3 bg-white rounded-lg p-2 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200"
+                >
+                  <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-sm shadow-md">
+                    {profile.fullName ? profile.fullName.charAt(0) : 'A'}
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900 text-sm">{profile.fullName || 'Agent Name'}</p>
+                    <p className="text-xs text-gray-500">MARA Agent</p>
+                  </div>
+                  <svg 
+                    className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${profileDropdownOpen ? 'rotate-180' : ''}`} 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                
+                {profileDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-xl z-50">
+                    <div className="p-2">
+                      <Link
+                        href="/agents/dashboard"
+                        className="flex items-center gap-3 px-3 py-2 text-sm rounded-md hover:bg-gray-100 transition-all duration-200"
+                        onClick={() => setProfileDropdownOpen(false)}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                        Agent Dashboard
+                      </Link>
+                      <Link
+                        href="/"
+                        className="flex items-center gap-3 px-3 py-2 text-sm rounded-md hover:bg-gray-100 transition-all duration-200"
+                        onClick={() => setProfileDropdownOpen(false)}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                        </svg>
+                        Visit Website
+                      </Link>
+                      <div className="border-t border-gray-100 my-1"></div>
+                      <button
+                        onClick={handleLogout}
+                        className="flex items-center gap-3 px-3 py-2 text-sm rounded-md hover:bg-gray-100 transition-all duration-200 w-full text-left"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                        </svg>
+                        Logout
+                      </button>
+                    </div>
+                  </div>
                 )}
-              </button>
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                  {profile.fullName ? profile.fullName.charAt(0) : 'A'}
-                </div>
-                <div>
-                  <p className="font-semibold text-gray-900 text-sm">{profile.fullName || 'Agent Name'}</p>
-                  <p className="text-xs text-gray-500">MARA Agent</p>
-                </div>
-                <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
               </div>
             </div>
           </div>
           {activeMainTab === 'dashboard' && (
             <>
-              {/* Good Morning Banner - Further reduced size */}
-              <div className="bg-gradient-to-r from-orange-400 to-yellow-400 rounded-lg p-4 mb-4 flex items-center justify-between">
+              {/* Modern Welcome Banner */}
+              <div className="bg-gradient-to-r from-purple-600 via-blue-600 to-purple-700 rounded-2xl p-6 mb-6 flex items-center justify-between shadow-xl">
                 <div className="flex-1">
-                  <h1 className="text-lg font-bold text-white mb-1">
-                    Good morning, {profile.fullName || 'Agent'}!
+                  <h1 className="text-2xl font-bold text-white mb-2">
+                    Good morning, {profile.fullName || 'Agent'}! 👋
                   </h1>
-                  <p className="text-white text-sm">
-                    Search and manage consultations on the marketplace to help clients with their immigration needs!
+                  <p className="text-purple-100 text-base">
+                    Ready to help clients with their immigration journey? Let's make today productive!
                   </p>
                 </div>
                 <div className="hidden md:block">
-                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-                    <span className="text-lg">👨‍💼</span>
-              </div>
+                  <div className="w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                    <span className="text-2xl">👨‍💼</span>
+                  </div>
                 </div>
               </div>
 
-              {/* Invite Friends Card - Further reduced size */}
-              <div className="bg-white rounded-lg shadow p-3 mb-4">
+              {/* Modern Invite Card */}
+              <div className="bg-gradient-to-r from-orange-50 to-yellow-50 border border-orange-200 rounded-2xl p-6 mb-6 shadow-lg">
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
-                    <h3 className="text-sm font-bold text-gray-900 mb-1">Invite your colleagues to MaraPlace</h3>
-                    <p className="text-gray-600 mb-2 text-xs">
+                    <h3 className="text-lg font-bold text-gray-900 mb-2">Invite your colleagues to MaraPlace</h3>
+                    <p className="text-gray-600 mb-3 text-sm">
                       Reward yourself and join our MARA community! Get recognition for every invited colleague! Everyone wins!
                     </p>
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-1">
-                        <span className="text-lg">💰</span>
-                        <span className="font-bold text-gray-900 text-sm">+50</span>
-                  </div>
-                      <button className="text-blue-600 hover:text-blue-800 font-medium text-xs">
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg shadow-sm">
+                        <span className="text-xl">💰</span>
+                        <span className="font-bold text-gray-900">+50</span>
+                      </div>
+                      <button className="text-orange-600 hover:text-orange-800 font-semibold text-sm transition-colors duration-200">
                         Send invite →
                       </button>
-              </div>
-                </div>
+                    </div>
+                  </div>
                   <div className="hidden md:block">
-                    <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
-                      <span className="text-lg">⭐</span>
+                    <div className="w-16 h-16 bg-gradient-to-r from-orange-400 to-yellow-400 rounded-full flex items-center justify-center shadow-lg">
+                      <span className="text-xl">⭐</span>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* KPI Summary Cards with Progress Bars */}
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+              {/* Modern KPI Cards */}
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
                 {/* Revenue */}
-                <div className="bg-white rounded-lg shadow p-3 flex flex-col items-center">
-                  <div className="text-xl font-bold text-green-700">$0.00</div>
-                  <div className="text-gray-500 text-xs mt-1 text-center">Revenue (lifetime)</div>
-                  <div className="w-full mt-3">
+                <div className="bg-white rounded-2xl shadow-lg p-6 flex flex-col items-center hover:shadow-xl transition-all duration-300 border border-gray-100">
+                  <div className="w-12 h-12 bg-gradient-to-r from-green-400 to-green-600 rounded-xl flex items-center justify-center mb-3 shadow-lg">
+                    <span className="text-white text-xl">💰</span>
+                  </div>
+                  <div className="text-2xl font-bold text-gray-900 mb-1">$0.00</div>
+                  <div className="text-gray-500 text-sm text-center mb-3">Revenue (lifetime)</div>
+                  <div className="w-full">
                     <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-green-600 h-2 rounded-full transition-all duration-500" style={{ width: '75%' }}></div>
+                      <div className="bg-gradient-to-r from-green-400 to-green-600 h-2 rounded-full transition-all duration-500" style={{ width: '75%' }}></div>
                     </div>
-                    <div className="flex justify-end mt-1">
-                      <span className="text-green-700 text-xs font-bold">$2,450 revenue</span>
+                    <div className="flex justify-end mt-2">
+                      <span className="text-green-600 text-xs font-bold">$2,450 revenue</span>
                     </div>
                   </div>
                 </div>
+                
                 {/* Consultations */}
-                <div className="bg-white rounded-lg shadow p-3 flex flex-col items-center">
-                  <div className="text-xl font-bold text-blue-600">{consultations.length}</div>
-                  <div className="text-gray-500 text-xs mt-1 text-center">Total consultations</div>
-                  <div className="w-full mt-3">
+                <div className="bg-white rounded-2xl shadow-lg p-6 flex flex-col items-center hover:shadow-xl transition-all duration-300 border border-gray-100">
+                  <div className="w-12 h-12 bg-gradient-to-r from-blue-400 to-blue-600 rounded-xl flex items-center justify-center mb-3 shadow-lg">
+                    <span className="text-white text-xl">📋</span>
+                  </div>
+                  <div className="text-2xl font-bold text-gray-900 mb-1">{consultations.length}</div>
+                  <div className="text-gray-500 text-sm text-center mb-3">Total consultations</div>
+                  <div className="w-full">
                     <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-blue-600 h-2 rounded-full transition-all duration-500" style={{ width: `${Math.min((consultations.length / 200) * 100, 100)}%` }}></div>
+                      <div className="bg-gradient-to-r from-blue-400 to-blue-600 h-2 rounded-full transition-all duration-500" style={{ width: `${Math.min((consultations.length / 200) * 100, 100)}%` }}></div>
                     </div>
-                    <div className="flex justify-end mt-1">
+                    <div className="flex justify-end mt-2">
                       <span className="text-blue-600 text-xs font-bold">{consultations.length} consultations</span>
                     </div>
                   </div>
                 </div>
+                
                 {/* Cases */}
-                <div className="bg-white rounded-lg shadow p-3 flex flex-col items-center">
-                  <div className="text-xl font-bold text-purple-600">0</div>
-                  <div className="text-gray-500 text-xs mt-1 text-center">Total cases</div>
-                  <div className="w-full mt-3">
+                <div className="bg-white rounded-2xl shadow-lg p-6 flex flex-col items-center hover:shadow-xl transition-all duration-300 border border-gray-100">
+                  <div className="w-12 h-12 bg-gradient-to-r from-purple-400 to-purple-600 rounded-xl flex items-center justify-center mb-3 shadow-lg">
+                    <span className="text-white text-xl">📁</span>
+                  </div>
+                  <div className="text-2xl font-bold text-gray-900 mb-1">0</div>
+                  <div className="text-gray-500 text-sm text-center mb-3">Total cases</div>
+                  <div className="w-full">
                     <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-purple-600 h-2 rounded-full transition-all duration-500" style={{ width: '45%' }}></div>
+                      <div className="bg-gradient-to-r from-purple-400 to-purple-600 h-2 rounded-full transition-all duration-500" style={{ width: '45%' }}></div>
                     </div>
-                    <div className="flex justify-end mt-1">
+                    <div className="flex justify-end mt-2">
                       <span className="text-purple-600 text-xs font-bold">89 cases</span>
                     </div>
                   </div>
                 </div>
+                
                 {/* Clients */}
-                <div className="bg-white rounded-lg shadow p-3 flex flex-col items-center">
-                  <div className="text-xl font-bold text-green-600">0</div>
-                  <div className="text-gray-500 text-xs mt-1 text-center">Total clients</div>
-                  {/* No progress bar for clients as in your screenshot */}
+                <div className="bg-white rounded-2xl shadow-lg p-6 flex flex-col items-center hover:shadow-xl transition-all duration-300 border border-gray-100">
+                  <div className="w-12 h-12 bg-gradient-to-r from-indigo-400 to-indigo-600 rounded-xl flex items-center justify-center mb-3 shadow-lg">
+                    <span className="text-white text-xl">👥</span>
+                  </div>
+                  <div className="text-2xl font-bold text-gray-900 mb-1">0</div>
+                  <div className="text-gray-500 text-sm text-center">Total clients</div>
                 </div>
+                
                 {/* Ratings */}
-                <div className="bg-white rounded-lg shadow p-3 flex flex-col items-center">
-                  <div className="text-xl font-bold text-pink-600">0</div>
-                  <div className="text-gray-500 text-xs mt-1 text-center">New ratings</div>
-                  <div className="w-full mt-3">
+                <div className="bg-white rounded-2xl shadow-lg p-6 flex flex-col items-center hover:shadow-xl transition-all duration-300 border border-gray-100">
+                  <div className="w-12 h-12 bg-gradient-to-r from-pink-400 to-pink-600 rounded-xl flex items-center justify-center mb-3 shadow-lg">
+                    <span className="text-white text-xl">⭐</span>
+                  </div>
+                  <div className="text-2xl font-bold text-gray-900 mb-1">0</div>
+                  <div className="text-gray-500 text-sm text-center mb-3">New ratings</div>
+                  <div className="w-full">
                     <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-pink-600 h-2 rounded-full transition-all duration-500" style={{ width: '78%' }}></div>
+                      <div className="bg-gradient-to-r from-pink-400 to-pink-600 h-2 rounded-full transition-all duration-500" style={{ width: '78%' }}></div>
                     </div>
-                    <div className="flex justify-end mt-1">
+                    <div className="flex justify-end mt-2">
                       <span className="text-pink-600 text-xs font-bold">156 ratings</span>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Charts with Real Data */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-white rounded-lg shadow p-4 min-h-[180px] flex flex-col">
-                  <div className="font-semibold mb-3 text-sm">Consultations (lifetime)</div>
-                  <div className="flex-1 flex items-end justify-between space-x-1">
+              {/* Modern Charts */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-white rounded-2xl shadow-lg p-6 min-h-[220px] flex flex-col border border-gray-100">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-lg font-bold text-gray-900">Consultations (lifetime)</h3>
+                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <span className="text-blue-600 text-sm">📊</span>
+                    </div>
+                  </div>
+                  <div className="flex-1 flex items-end justify-between space-x-2">
                     {[0, 1, 2, 3, 4, 5, 6].map((month) => {
                       const height = Math.random() * 100 + 20; // Random height for demo
                       return (
                         <div key={month} className="flex flex-col items-center flex-1">
                           <div 
-                            className="w-full bg-blue-200 rounded-t transition-all duration-500 hover:bg-blue-300"
+                            className="w-full bg-gradient-to-t from-blue-400 to-blue-600 rounded-t-lg transition-all duration-500 hover:from-blue-500 hover:to-blue-700 shadow-sm"
                             style={{ height: `${height}%` }}
                           ></div>
-                          <div className="text-xs text-gray-500 mt-1">{['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'][month]}</div>
+                          <div className="text-xs text-gray-500 mt-2 font-medium">{['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'][month]}</div>
                         </div>
                       );
                     })}
                   </div>
                 </div>
-                <div className="bg-white rounded-lg shadow p-4 min-h-[180px] flex flex-col">
-                  <div className="font-semibold mb-3 text-sm">Revenue (lifetime)</div>
-                  <div className="flex-1 flex items-end justify-between space-x-1">
+                
+                <div className="bg-white rounded-2xl shadow-lg p-6 min-h-[220px] flex flex-col border border-gray-100">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-lg font-bold text-gray-900">Revenue (lifetime)</h3>
+                    <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                      <span className="text-green-600 text-sm">💰</span>
+                    </div>
+                  </div>
+                  <div className="flex-1 flex items-end justify-between space-x-2">
                     {[0, 1, 2, 3, 4, 5, 6].map((month) => {
                       const height = Math.random() * 100 + 20; // Random height for demo
                       return (
                         <div key={month} className="flex flex-col items-center flex-1">
                           <div 
-                            className="w-full bg-green-200 rounded-t transition-all duration-500 hover:bg-green-300"
+                            className="w-full bg-gradient-to-t from-green-400 to-green-600 rounded-t-lg transition-all duration-500 hover:from-green-500 hover:to-green-700 shadow-sm"
                             style={{ height: `${height}%` }}
                           ></div>
-                          <div className="text-xs text-gray-500 mt-1">{['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'][month]}</div>
+                          <div className="text-xs text-gray-500 mt-2 font-medium">{['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'][month]}</div>
                         </div>
                       );
                     })}
@@ -1054,6 +1248,17 @@ export default function AgentDashboard() {
                               <div className="text-sm text-gray-600">
                                 Event type <span className="font-semibold">{consultation.duration} Minute Meeting</span>
                               </div>
+                              <div className="mt-1">
+                                <span className={`inline-block px-2 py-1 text-xs rounded-full font-medium ${
+                                  consultation.status === 'CONFIRMED' ? 'bg-green-100 text-green-800' :
+                                  consultation.status === 'COMPLETED' ? 'bg-blue-100 text-blue-800' :
+                                  consultation.status === 'CANCELLED' ? 'bg-red-100 text-red-800' :
+                                  consultation.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
+                                  'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {consultation.status}
+                                </span>
+                              </div>
                               {consultation.clientEmail && (
                                 <div className="text-xs text-gray-500">{consultation.clientEmail}</div>
                               )}
@@ -1067,6 +1272,24 @@ export default function AgentDashboard() {
                               <div className="text-sm text-gray-600">
                                 1 host | 0 non-hosts
                               </div>
+
+                              {/* Quick Actions for PENDING bookings */}
+                              {consultation.status === 'PENDING' && (
+                                <div className="flex items-center space-x-2">
+                                  <button
+                                    onClick={(e) => handleQuickConfirm(consultation.id, e)}
+                                    className="px-3 py-1 bg-green-600 text-white text-xs rounded-md hover:bg-green-700 transition-colors"
+                                  >
+                                    Confirm
+                                  </button>
+                                  <button
+                                    onClick={(e) => handleQuickReject(consultation.id, e)}
+                                    className="px-3 py-1 bg-red-600 text-white text-xs rounded-md hover:bg-red-700 transition-colors"
+                                  >
+                                    Reject
+                                  </button>
+                                </div>
+                              )}
 
                               {/* Details Action */}
                               <div className="flex items-center space-x-2 text-green-600">

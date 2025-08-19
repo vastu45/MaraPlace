@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useSession, signIn } from "next-auth/react";
+import PasswordInput from "@/components/PasswordInput";
 
 export default function LoginPage() {
   const [form, setForm] = useState({ email: "", password: "" });
@@ -77,14 +78,13 @@ export default function LoginPage() {
           </div>
           <div>
             <label className="block text-sm font-medium mb-1" htmlFor="password">Password</label>
-            <input
+            <PasswordInput
               id="password"
               name="password"
-              type="password"
-              required
               value={form.password}
               onChange={handleChange}
-              className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-300"
+              placeholder="Enter your password"
+              required
             />
           </div>
           {error && <div className="text-red-600 text-sm text-center">{error}</div>}

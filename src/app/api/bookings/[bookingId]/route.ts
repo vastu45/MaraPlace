@@ -89,7 +89,7 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { status, notes } = body;
+    const { status, notes, date, startTime, endTime } = body;
 
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
@@ -127,6 +127,9 @@ export async function PATCH(
       data: {
         ...(status && { status }),
         ...(notes && { notes }),
+        ...(date && { date: new Date(date) }),
+        ...(startTime && { startTime }),
+        ...(endTime && { endTime }),
       },
       include: {
         client: {

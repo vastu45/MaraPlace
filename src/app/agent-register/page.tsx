@@ -3,10 +3,13 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import PasswordInput from "@/components/PasswordInput";
 
 export default function AgentRegister() {
+  const router = useRouter();
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -46,6 +49,7 @@ export default function AgentRegister() {
     else if (!/^\S+@\S+\.\S+$/.test(form.email)) newErrors.email = "Invalid email format";
     // Password
     if (!form.password) newErrors.password = "Password is required";
+    else if (form.password.length < 6) newErrors.password = "Password must be at least 6 characters long";
     if (!form.confirmPassword) newErrors.confirmPassword = "Confirm password is required";
     if (form.password && form.confirmPassword && form.password !== form.confirmPassword) newErrors.confirmPassword = "Passwords do not match";
     // Phone
@@ -159,7 +163,6 @@ export default function AgentRegister() {
           >
             <h1 className="text-2xl font-bold mb-2 text-green-700 dark:text-green-400">Register</h1>
             <p className="mb-6 text-gray-500 dark:text-gray-300 text-sm">Manage your agent profile efficiently. Fill in your details to get started.</p>
-            {success && <div className="text-green-600 text-center mb-4">Registration successful!</div>}
             {errors.form && <div className="text-red-500 text-center mb-4">{errors.form}</div>}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -208,25 +211,27 @@ export default function AgentRegister() {
               </div>
               <div>
                 <label className="block font-medium mb-1">Password *</label>
-                <input
-                  type="password"
+                <PasswordInput
+                  id="password"
                   name="password"
                   value={form.password}
                   onChange={handleChange}
-                  className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400"
+                  placeholder="Enter your password"
+                  required
+                  error={errors.password}
                 />
-                {errors.password && <div className="text-red-500 text-xs mt-1">{errors.password}</div>}
               </div>
               <div>
                 <label className="block font-medium mb-1">Confirm Password *</label>
-                <input
-                  type="password"
+                <PasswordInput
+                  id="confirmPassword"
                   name="confirmPassword"
                   value={form.confirmPassword}
                   onChange={handleChange}
-                  className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400"
+                  placeholder="Confirm your password"
+                  required
+                  error={errors.confirmPassword}
                 />
-                {errors.confirmPassword && <div className="text-red-500 text-xs mt-1">{errors.confirmPassword}</div>}
               </div>
             </div>
             {/* Additional fields below the grid */}
@@ -359,6 +364,61 @@ export default function AgentRegister() {
           </form>
         </div>
       </div>
+      
+      {/* Success Modal */}
+      {success && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl p-10 max-w-md w-full text-center shadow-2xl">
+            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg className="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h3 className="text-3xl font-bold text-green-700 mb-4">Registration Successful!</h3>
+            <p className="text-gray-600 text-lg mb-8">Your agent account has been created successfully!</p>
+            <div className="space-y-4">
+              <p className="text-sm text-gray-500">Your account is now pending approval. You'll receive an email once it's been reviewed.</p>
+              <p className="text-sm text-gray-500">You can log in once your account is approved.</p>
+            </div>
+            <div className="mt-8 space-y-3">
+              <Button 
+                onClick={() => router.push('/login')}
+                className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+              >
+                Go to Login
+              </Button>
+              <Button 
+                onClick={() => {
+                  setSuccess(false);
+                  setForm({
+                    name: "",
+                    email: "",
+                    phone: "",
+                    businessName: "",
+                    abn: "",
+                    maraOrLawyerNumber: "",
+                    businessAddress: "",
+                    calendlyUrl: "",
+                    photo: null,
+                    businessLogo: null,
+                    businessRegistration: null,
+                    maraCertificate: null,
+                    password: "",
+                    confirmPassword: "",
+                  });
+                  setErrors({});
+                  setAgreeTerms(false);
+                }}
+                variant="outline"
+                className="w-full border-gray-300 text-gray-700 hover:bg-gray-50 px-6 py-3 rounded-xl font-semibold"
+              >
+                Register Another Account
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <Footer />
     </div>
   );

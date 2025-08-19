@@ -108,7 +108,7 @@ export default function SpecialistCard({ specialist }: SpecialistCardProps) {
               {[...Array(5)].map((_, i) => (
                 <svg 
                   key={i} 
-                  className={`w-3 h-3 ${i < Math.round(specialist.rating) ? 'text-yellow-400' : 'text-gray-300'}`} 
+                  className={`w-3 h-3 ${i < Math.round(typeof specialist.rating === 'number' ? specialist.rating : 0) ? 'text-yellow-400' : 'text-gray-300'}`} 
                   fill="currentColor" 
                   viewBox="0 0 20 20"
                 >
@@ -120,7 +120,7 @@ export default function SpecialistCard({ specialist }: SpecialistCardProps) {
               style={{ color: currentTheme.colors.neutral[600] }}
               className="text-xs"
             >
-              {specialist.rating.toFixed(1)} ({specialist.totalReviews})
+              {(typeof specialist.rating === 'number' ? specialist.rating : 0).toFixed(1)} ({specialist.totalReviews || 0})
             </span>
           </div>
 
@@ -130,7 +130,7 @@ export default function SpecialistCard({ specialist }: SpecialistCardProps) {
               style={{ color: currentTheme.colors.neutral[600] }}
               className="text-xs leading-relaxed"
             >
-              {specialist.bio || `Experienced migration specialist with expertise in ${specialist.specializations.slice(0, 2).join(' and ')}.`}
+              {specialist.bio || `Experienced migration specialist with expertise in ${(specialist.specializations || []).slice(0, 2).join(' and ')}.`}
             </p>
           </div>
 
@@ -201,7 +201,7 @@ export default function SpecialistCard({ specialist }: SpecialistCardProps) {
               Specializations
             </h4>
             <div className="flex flex-wrap gap-1 justify-center">
-              {specialist.specializations.slice(0, 2).map((spec, index) => (
+              {(specialist.specializations || []).slice(0, 2).map((spec, index) => (
                 <span 
                   key={index}
                   style={{ 
@@ -213,7 +213,7 @@ export default function SpecialistCard({ specialist }: SpecialistCardProps) {
                   {spec}
                 </span>
               ))}
-              {specialist.specializations.length > 2 && (
+              {(specialist.specializations || []).length > 2 && (
                 <span 
                   style={{ 
                     backgroundColor: currentTheme.colors.neutral[100],
@@ -221,7 +221,7 @@ export default function SpecialistCard({ specialist }: SpecialistCardProps) {
                   }}
                   className="text-xs px-2 py-1 rounded-full font-medium"
                 >
-                  +{specialist.specializations.length - 2} more
+                  +{(specialist.specializations || []).length - 2} more
                 </span>
               )}
             </div>

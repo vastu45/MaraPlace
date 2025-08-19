@@ -5,9 +5,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { signIn } from "next-auth/react";
+import PasswordInput from "@/components/PasswordInput";
 
 export default function SignupPage() {
-  const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const [form, setForm] = useState({ name: "", email: "", password: "", confirmPassword: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -19,6 +20,19 @@ export default function SignupPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate passwords match
+    if (form.password !== form.confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+    
+    // Validate password strength
+    if (form.password.length < 6) {
+      setError("Password must be at least 6 characters long");
+      return;
+    }
+    
     setLoading(true);
     setError("");
     setSuccess(false);
@@ -26,12 +40,12 @@ export default function SignupPage() {
       const res = await fetch("/api/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ name: form.name, email: form.email, password: form.password }),
       });
       const data = await res.json();
       if (res.ok) {
         setSuccess(true);
-        setForm({ name: "", email: "", password: "" });
+        setForm({ name: "", email: "", password: "", confirmPassword: "" });
       } else {
         setError(data.error || "Signup failed. Please try again.");
       }
@@ -54,9 +68,7 @@ export default function SignupPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#dcfce7] to-green-400">
       <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-md">
         <h1 className="text-2xl font-bold mb-6 text-center text-green-700">Sign Up for MaraPlace</h1>
-        {success ? (
-          <div className="text-green-700 text-center mb-4">Signup successful! You can now <Link href="/login" className="underline text-green-800">login</Link>.</div>
-        ) : (
+        {!success && (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-1" htmlFor="name">Name</label>
@@ -84,14 +96,24 @@ export default function SignupPage() {
             </div>
             <div>
               <label className="block text-sm font-medium mb-1" htmlFor="password">Password</label>
-              <input
+              <PasswordInput
                 id="password"
                 name="password"
-                type="password"
-                required
                 value={form.password}
                 onChange={handleChange}
-                className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-300"
+                placeholder="Enter your password"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1" htmlFor="confirmPassword">Confirm Password</label>
+              <PasswordInput
+                id="confirmPassword"
+                name="confirmPassword"
+                value={form.confirmPassword}
+                onChange={handleChange}
+                placeholder="Confirm your password"
+                required
               />
             </div>
             {error && <div className="text-red-600 text-sm text-center">{error}</div>}
@@ -123,6 +145,42 @@ export default function SignupPage() {
           </Button>
         </div>
       </div>
+      
+      {/* Success Modal */}
+      {success && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl p-10 max-w-md w-full text-center shadow-2xl">
+            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg className="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h3 className="text-3xl font-bold text-green-700 mb-4">Account Created Successfully!</h3>
+            <p className="text-gray-600 text-lg mb-8">Your MaraPlace account has been created!</p>
+            <div className="space-y-4">
+              <p className="text-sm text-gray-500">You can now log in to access your dashboard and start booking consultations.</p>
+            </div>
+            <div className="mt-8 space-y-3">
+              <Button 
+                onClick={() => router.push('/login')}
+                className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+              >
+                Go to Login
+              </Button>
+              <Button 
+                onClick={() => {
+                  setSuccess(false);
+                  setForm({ name: "", email: "", password: "", confirmPassword: "" });
+                }}
+                variant="outline"
+                className="w-full border-gray-300 text-gray-700 hover:bg-gray-50 px-6 py-3 rounded-xl font-semibold"
+              >
+                Create Another Account
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
-} 
+}

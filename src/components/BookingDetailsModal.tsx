@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
-import { X, Clock, User, Mail, Phone, MapPin, Calendar, FileText, Edit, Filter, RefreshCw, Trash2, AlertTriangle } from "lucide-react";
+import { X, Clock, User, Mail, Phone, MapPin, Calendar, FileText, Edit, Filter, RefreshCw, Trash2, AlertTriangle, ArrowLeft, CheckCircle, XCircle } from "lucide-react";
+import BookingCalendar from "./BookingCalendar";
 
 interface BookingDetails {
   id: string;
@@ -20,11 +21,13 @@ interface BookingDetails {
   serviceName?: string;
   location?: string;
   createdAt: string;
+  serviceId?: string;
   client?: {
     name: string;
     email: string;
   };
   agent: {
+    id: string;
     user: {
       name: string;
       email: string;
@@ -43,8 +46,16 @@ export default function BookingDetailsModal({ isOpen, onClose, bookingId }: Book
   const [booking, setBooking] = useState<BookingDetails | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showReschedule, setShowReschedule] = useState(false);
+  const [rescheduleDate, setRescheduleDate] = useState<Date | null>(null);
+  const [rescheduleTime, setRescheduleTime] = useState<string>("");
+  const [rescheduling, setRescheduling] = useState(false);
+  const [showConfirmReject, setShowConfirmReject] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [rejecting, setRejecting] = useState(false);
 
   useEffect(() => {
     if (isOpen && bookingId) {
@@ -115,8 +126,119 @@ export default function BookingDetailsModal({ isOpen, onClose, bookingId }: Book
   };
 
   const handleReschedule = () => {
-    // TODO: Implement reschedule functionality
-    alert("Reschedule functionality will be implemented soon!");
+    setShowReschedule(true);
+  };
+
+  const handleTimeSlotSelect = (date: Date, time: string) => {
+    setRescheduleDate(date);
+    setRescheduleTime(time);
+  };
+
+  const handleRescheduleSubmit = async () => {
+    if (!rescheduleDate || !rescheduleTime || !booking) return;
+    
+    setRescheduling(true);
+    try {
+      const response = await fetch(`/api/bookings/${bookingId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          date: format(rescheduleDate, 'yyyy-MM-dd'),
+          startTime: rescheduleTime,
+          endTime: rescheduleTime, // You might want to calculate this based on duration
+        }),
+      });
+      
+      if (response.ok) {
+        setShowReschedule(false);
+        setRescheduleDate(null);
+        setRescheduleTime("");
+        onClose();
+        // Optionally refresh the consultations list
+        window.location.reload();
+      } else {
+        setError("Failed to reschedule booking");
+      }
+    } catch (error) {
+      console.error('Error rescheduling booking:', error);
+      setError("Failed to reschedule booking");
+    } finally {
+      setRescheduling(false);
+    }
+  };
+
+  const handleBackToDetails = () => {
+    setShowReschedule(false);
+    setRescheduleDate(null);
+    setRescheduleTime("");
+  };
+
+  const handleConfirmBooking = async () => {
+    setConfirming(true);
+    try {
+      const response = await fetch(`/api/bookings/${bookingId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          status: 'CONFIRMED',
+        }),
+      });
+      
+      if (response.ok) {
+        setShowConfirmReject(false);
+        setSuccess("Booking confirmed successfully!");
+        // Refresh booking details to show updated status
+        await fetchBookingDetails();
+        // Clear success message after 3 seconds
+        setTimeout(() => setSuccess(""), 3000);
+        // Optionally refresh the consultations list
+        window.location.reload();
+      } else {
+        setError("Failed to confirm booking");
+      }
+    } catch (error) {
+      console.error('Error confirming booking:', error);
+      setError("Failed to confirm booking");
+    } finally {
+      setConfirming(false);
+    }
+  };
+
+  const handleRejectBooking = async () => {
+    setRejecting(true);
+    try {
+      const response = await fetch(`/api/bookings/${bookingId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          status: 'CANCELLED',
+        }),
+      });
+      
+      if (response.ok) {
+        setShowConfirmReject(false);
+        setSuccess("Booking rejected successfully!");
+        // Refresh booking details to show updated status
+        await fetchBookingDetails();
+        // Clear success message after 3 seconds
+        setTimeout(() => setSuccess(""), 3000);
+        // Optionally refresh the consultations list
+        window.location.reload();
+      } else {
+        setError("Failed to reject booking");
+      }
+    } catch (error) {
+      console.error('Error rejecting booking:', error);
+      setError("Failed to reject booking");
+    } finally {
+      setRejecting(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -128,14 +250,21 @@ export default function BookingDetailsModal({ isOpen, onClose, bookingId }: Book
         <div className="flex items-center justify-between p-6 border-b">
           <div className="flex items-center space-x-3">
             <div className="w-3 h-3 bg-green-600 rounded-full"></div>
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900">
-                {booking ? (booking.clientName || booking.client?.name || "Unknown Client") : "Loading..."}
-              </h2>
-              <p className="text-sm text-gray-600">
-                Event type <span className="font-semibold">{booking?.duration || 30} Minute Meeting</span>
-              </p>
-            </div>
+                          <div>
+                <h2 className="text-xl font-semibold text-gray-900">
+                  {booking ? (booking.clientName || booking.client?.name || "Unknown Client") : "Loading..."}
+                </h2>
+                <p className="text-sm text-gray-600">
+                  Event type <span className="font-semibold">{booking?.duration || 30} Minute Meeting</span>
+                </p>
+                {booking && (
+                  <div className="mt-2">
+                    <span className={`inline-block px-2 py-1 text-xs rounded-full font-medium ${getStatusColor(booking.status)}`}>
+                      {booking.status}
+                    </span>
+                  </div>
+                )}
+              </div>
           </div>
           <div className="flex items-center space-x-2">
             <span className="text-sm text-gray-600">1 host | 0 non-hosts</span>
@@ -156,6 +285,8 @@ export default function BookingDetailsModal({ isOpen, onClose, bookingId }: Book
             </div>
           ) : error ? (
             <div className="text-center py-12 text-red-600">{error}</div>
+          ) : success ? (
+            <div className="text-center py-12 text-green-600">{success}</div>
           ) : booking ? (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Left Sidebar */}
@@ -175,6 +306,47 @@ export default function BookingDetailsModal({ isOpen, onClose, bookingId }: Book
 
                 {/* Action Buttons */}
                 <div className="space-y-2">
+                  {/* Confirm/Reject Buttons for PENDING bookings */}
+                  {booking?.status === 'PENDING' && (
+                    <div className="space-y-2 mb-4">
+                      <button 
+                        onClick={handleConfirmBooking}
+                        disabled={confirming}
+                        className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {confirming ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                            <span>Confirming...</span>
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle className="w-4 h-4" />
+                            <span>Confirm Booking</span>
+                          </>
+                        )}
+                      </button>
+                      
+                      <button 
+                        onClick={handleRejectBooking}
+                        disabled={rejecting}
+                        className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {rejecting ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                            <span>Rejecting...</span>
+                          </>
+                        ) : (
+                          <>
+                            <XCircle className="w-4 h-4" />
+                            <span>Reject Booking</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
+
                   <button 
                     onClick={handleReschedule}
                     className="w-full flex items-center justify-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
@@ -300,6 +472,91 @@ export default function BookingDetailsModal({ isOpen, onClose, bookingId }: Book
           ) : null}
         </div>
       </div>
+
+      {/* Reschedule Modal */}
+      {showReschedule && booking && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b">
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={handleBackToDetails}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900">Booking Details</h2>
+                  <p className="text-sm text-gray-600">Consultation with {booking.agent.user.name}</p>
+                </div>
+              </div>
+              <button
+                onClick={onClose}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Reschedule Content */}
+            <div className="p-6">
+              <div className="text-center mb-8">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Calendar className="w-8 h-8 text-green-600" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Reschedule Booking</h3>
+                <p className="text-gray-600 text-lg">
+                  Select a new date and time for your consultation with {booking.agent.user.name}.
+                </p>
+              </div>
+
+              {/* Current Booking Info */}
+              <div className="bg-gray-50 rounded-xl p-6 mb-8">
+                <h4 className="font-semibold text-gray-900 mb-3">Current Booking</h4>
+                <p className="text-gray-700">
+                  {format(new Date(booking.date), 'EEEE, MMMM d, yyyy')} at {booking.startTime} - {booking.endTime}
+                </p>
+              </div>
+
+              {/* Calendar */}
+              <div className="bg-white rounded-xl border border-gray-200 p-6">
+                <BookingCalendar
+                  agentId={booking.agent.id}
+                  serviceId={booking.serviceId}
+                  onTimeSlotSelect={handleTimeSlotSelect}
+                  selectedDate={rescheduleDate || undefined}
+                  selectedTime={rescheduleTime}
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-between mt-8">
+                <button
+                  onClick={handleBackToDetails}
+                  className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Back to Details
+                </button>
+                <button
+                  onClick={handleRescheduleSubmit}
+                  disabled={!rescheduleDate || !rescheduleTime || rescheduling}
+                  className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                >
+                  {rescheduling ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Rescheduling...</span>
+                    </>
+                  ) : (
+                    <span>Reschedule Booking</span>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (

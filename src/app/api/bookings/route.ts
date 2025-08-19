@@ -187,6 +187,102 @@ export async function POST(request: NextRequest) {
   }
 }
 
+export async function GET(request: NextRequest) {
+  try {
+    console.log('GET /api/bookings called');
+    const session = await getServerSession(authOptions);
+    console.log('Session:', session);
+    console.log('Session user:', session?.user);
+    
+    if (!session?.user?.email) {
+      console.log('No session or user email');
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
+    // Get the user
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+    });
+    console.log('User from DB:', user);
+
+    if (!user) {
+      console.log('User not found in DB');
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    let bookings;
+    
+    // If user is an agent, get their bookings
+    if ((session.user as any)?.role === 'AGENT') {
+      console.log('User is an agent, fetching agent bookings');
+      const agentProfile = await prisma.agentProfile.findUnique({
+        where: { userId: user.id },
+      });
+      
+      if (!agentProfile) {
+        console.log('Agent profile not found');
+        return NextResponse.json({ error: 'Agent profile not found' }, { status: 404 });
+      }
+
+      bookings = await prisma.booking.findMany({
+        where: { agentId: agentProfile.id },
+        include: {
+          client: {
+            select: {
+              name: true,
+              email: true,
+            }
+          },
+          agent: {
+            include: {
+              user: {
+                select: {
+                  name: true,
+                  email: true,
+                }
+              }
+            }
+          },
+          service: true,
+        },
+        orderBy: { date: 'desc' },
+      });
+    } else {
+      // If user is a client, get their bookings
+      console.log('User is a client, fetching client bookings for clientId:', user.id);
+      bookings = await prisma.booking.findMany({
+        where: { clientId: user.id },
+        include: {
+          client: {
+            select: {
+              name: true,
+              email: true,
+            }
+          },
+          agent: {
+            include: {
+              user: {
+                select: {
+                  name: true,
+                  email: true,
+                }
+              }
+            }
+          },
+          service: true,
+        },
+        orderBy: { date: 'desc' },
+      });
+    }
+
+    console.log('Found bookings:', bookings);
+    return NextResponse.json({ bookings });
+  } catch (error) {
+    console.error('Error fetching bookings:', error);
+    return NextResponse.json({ error: 'Failed to fetch bookings' }, { status: 500 });
+  }
+}
+
 export async function PATCH(request: NextRequest) {
   // Mark all bookings for the current agent as seen
   try {

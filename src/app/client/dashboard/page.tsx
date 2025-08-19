@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { CalendarIcon, UserIcon, SettingsIcon, ClockIcon, MapPinIcon, PhoneIcon, MailIcon, SearchIcon, FileTextIcon, CreditCardIcon, MessageSquareIcon, UsersIcon } from "lucide-react";
 import ClientBookingDetailsModal from "@/components/ClientBookingDetailsModal";
+import Navbar from "@/components/Navbar";
 
 interface Booking {
   id: string;
@@ -57,6 +58,50 @@ interface ClientProfile {
   confirmPassword: string;
 }
 
+interface Agent {
+  id: string;
+  userId: string;
+  name: string;
+  email: string;
+  phone: string;
+  image: string | null;
+  maraNumber: string;
+  maraVerified: boolean;
+  businessName: string;
+  businessCity: string;
+  businessState: string;
+  businessAddress: string;
+  abn: string;
+  bio: string;
+  calendlyUrl: string | null;
+  specializations: string[];
+  languages: string[];
+  hourlyRate: number;
+  consultationFee: number;
+  experience: number;
+  rating: number;
+  totalReviews: number;
+  totalBookings: number;
+  services: Array<{
+    id: string;
+    name: string;
+    price: number;
+    duration: number;
+  }>;
+  recentReviews: Array<{
+    rating: number;
+    comment: string;
+    createdAt: string;
+  }>;
+  documents: Array<{
+    id: string;
+    type: string;
+    url: string;
+    name: string;
+  }>;
+  status: string;
+}
+
 export default function ClientDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -83,6 +128,9 @@ export default function ClientDashboard() {
   const [formSuccess, setFormSuccess] = useState("");
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [agentsLoading, setAgentsLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Auto-dismiss success message after 5 seconds
   useEffect(() => {
@@ -109,14 +157,21 @@ export default function ClientDashboard() {
 
     fetchBookings();
     fetchProfile();
+    fetchAgents();
   }, [session, status, router]);
 
   const fetchBookings = async () => {
     try {
+      console.log("Fetching bookings...");
       const res = await fetch("/api/bookings");
+      console.log("Bookings API response status:", res.status);
       if (res.ok) {
         const data = await res.json();
+        console.log("Bookings API response data:", data);
         setBookings(data.bookings || []);
+      } else {
+        const errorData = await res.json();
+        console.error("Bookings API error:", errorData);
       }
     } catch (error) {
       console.error("Failed to fetch bookings:", error);
@@ -207,9 +262,49 @@ export default function ClientDashboard() {
     fetchBookings();
   };
 
-  const upcomingBookings = bookings.filter(b => 
-    new Date(b.date) >= new Date() && b.status === "CONFIRMED"
-  ).slice(0, 3);
+  const fetchAgents = async () => {
+    try {
+      setAgentsLoading(true);
+      const res = await fetch("/api/agents");
+      if (res.ok) {
+        const data = await res.json();
+        setAgents(data.agents || []);
+      } else {
+        console.error("Failed to fetch agents");
+      }
+    } catch (error) {
+      console.error("Failed to fetch agents:", error);
+    } finally {
+      setAgentsLoading(false);
+    }
+  };
+
+  const filteredAgents = agents.filter(agent => 
+    (agent.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (agent.businessName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (Array.isArray(agent.specializations) ? agent.specializations.some(spec => (spec || '').toLowerCase().includes(searchQuery.toLowerCase())) : false) ||
+    (Array.isArray(agent.languages) ? agent.languages.some(lang => (lang || '').toLowerCase().includes(searchQuery.toLowerCase())) : false)
+  );
+
+  // Debug logging for bookings
+  console.log("All bookings:", bookings);
+  console.log("Bookings with dates:", bookings.map(b => ({ 
+    date: b.date, 
+    status: b.status, 
+    dateObj: new Date(b.date),
+    isTodayOrFuture: new Date(b.date) >= new Date(new Date().setHours(0, 0, 0, 0))
+  })));
+
+  const upcomingBookings = bookings.filter(b => {
+    const bookingDate = new Date(b.date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset time to start of day for proper comparison
+    const isUpcoming = bookingDate >= today && (b.status === "CONFIRMED" || b.status === "PENDING");
+    console.log(`Booking ${b.id}: date=${b.date}, status=${b.status}, isUpcoming=${isUpcoming}`);
+    return isUpcoming;
+  }).slice(0, 3);
+
+  console.log("Upcoming bookings:", upcomingBookings);
 
   const recentBookings = bookings.slice(0, 5);
 
@@ -226,7 +321,9 @@ export default function ClientDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
+      <Navbar />
+      
+      {/* Dashboard Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
@@ -326,17 +423,7 @@ export default function ClientDashboard() {
                   <span className="font-medium">Payments</span>
                 </button>
                 
-                <button
-                  onClick={() => setActiveMainTab('resources')}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors ${
-                    activeMainTab === 'resources' 
-                      ? 'bg-green-50 text-green-700 border border-green-200' 
-                      : 'text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  <FileTextIcon className="w-5 h-5" />
-                  <span className="font-medium">Resources</span>
-                </button>
+
                 
                 <button
                   onClick={() => setActiveMainTab('messages')}
@@ -378,6 +465,10 @@ export default function ClientDashboard() {
                     <CardContent>
                       <div className="text-2xl font-bold">{upcomingBookings.length}</div>
                       <p className="text-xs text-gray-600">Next 30 days</p>
+                      {/* Debug info - remove after testing */}
+                      <div className="text-xs text-gray-400 mt-1">
+                        Total: {bookings.length} | Pending: {bookings.filter(b => b.status === "PENDING").length} | Confirmed: {bookings.filter(b => b.status === "CONFIRMED").length}
+                      </div>
                     </CardContent>
                   </Card>
                   
@@ -785,109 +876,82 @@ export default function ClientDashboard() {
                         <input
                           type="text"
                           placeholder="Search agents by name, specialization, or location..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
                           className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                         />
                       </div>
                     </div>
                     
+                    {agentsLoading ? (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+                        <span className="ml-2 text-gray-600">Loading agents...</span>
+                      </div>
+                    ) : filteredAgents.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        <UserIcon className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                        <p>No agents found</p>
+                        {searchQuery && (
+                          <p className="text-sm mt-2">Try adjusting your search terms</p>
+                        )}
+                      </div>
+                    ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {/* Sample Agent Cards */}
-                      <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                        {filteredAgents.map((agent) => (
+                          <div key={agent.id} className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
                         <div className="flex items-center gap-3 mb-4">
                           <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                                {agent.image ? (
+                                  <img 
+                                    src={agent.image} 
+                                    alt={agent.name}
+                                    className="w-12 h-12 rounded-full object-cover"
+                                  />
+                                ) : (
                             <UserIcon className="w-6 h-6 text-green-600" />
+                                )}
                           </div>
                           <div>
-                            <h3 className="font-semibold text-gray-900">Sarah Johnson</h3>
-                            <p className="text-sm text-gray-600">Immigration Lawyer</p>
+                                <h3 className="font-semibold text-gray-900">{agent.name || 'Unknown Agent'}</h3>
+                                <p className="text-sm text-gray-600">{agent.businessName || 'No Business Name'}</p>
                           </div>
                         </div>
                         <div className="space-y-2 mb-4">
                           <p className="text-sm text-gray-600">
-                            <strong>Specializations:</strong> Skilled Migration, Family Visas
+                                <strong>Specializations:</strong> {Array.isArray(agent.specializations) ? agent.specializations.slice(0, 2).join(', ') : 'N/A'}
+                                {Array.isArray(agent.specializations) && agent.specializations.length > 2 && '...'}
                           </p>
                           <p className="text-sm text-gray-600">
-                            <strong>Languages:</strong> English, Spanish
+                                <strong>Languages:</strong> {Array.isArray(agent.languages) ? agent.languages.slice(0, 2).join(', ') : 'N/A'}
+                                {Array.isArray(agent.languages) && agent.languages.length > 2 && '...'}
                           </p>
                           <p className="text-sm text-gray-600">
-                            <strong>Experience:</strong> 8 years
+                                <strong>Experience:</strong> {agent.experience || 'N/A'} years
+                              </p>
+                          <p className="text-sm text-gray-600">
+                                <strong>Location:</strong> {agent.businessCity || 'N/A'}, {agent.businessState || 'N/A'}
                           </p>
                         </div>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-1">
                             <span className="text-yellow-400">★</span>
-                            <span className="text-sm text-gray-600">4.8 (24 reviews)</span>
+                                <span className="text-sm text-gray-600">
+                                  {(typeof agent.rating === 'number' ? agent.rating.toFixed(1) : 'N/A')} ({agent.totalReviews || 0} reviews)
+                                </span>
                           </div>
-                          <Button size="sm" className="bg-green-600 hover:bg-green-700">
-                            View Profile
+                              <Button 
+                                size="sm" 
+                                className="bg-green-600 hover:bg-green-700"
+                                onClick={() => router.push(`/book/${agent.id}`)}
+                              >
+                                Book Consultation
                           </Button>
                         </div>
                       </div>
-
-                      <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
-                        <div className="flex items-center gap-3 mb-4">
-                          <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                            <UserIcon className="w-6 h-6 text-blue-600" />
+                        ))}
                           </div>
-                          <div>
-                            <h3 className="font-semibold text-gray-900">Michael Chen</h3>
-                            <p className="text-sm text-gray-600">Registered Migration Agent</p>
-                          </div>
-                        </div>
-                        <div className="space-y-2 mb-4">
-                          <p className="text-sm text-gray-600">
-                            <strong>Specializations:</strong> Business Visas, Student Visas
-                          </p>
-                          <p className="text-sm text-gray-600">
-                            <strong>Languages:</strong> English, Mandarin
-                          </p>
-                          <p className="text-sm text-gray-600">
-                            <strong>Experience:</strong> 12 years
-                          </p>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-1">
-                            <span className="text-yellow-400">★</span>
-                            <span className="text-sm text-gray-600">4.9 (31 reviews)</span>
-                          </div>
-                          <Button size="sm" className="bg-green-600 hover:bg-green-700">
-                            View Profile
-                          </Button>
-                        </div>
-                      </div>
-
-                      <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
-                        <div className="flex items-center gap-3 mb-4">
-                          <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                            <UserIcon className="w-6 h-6 text-purple-600" />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold text-gray-900">Emma Rodriguez</h3>
-                            <p className="text-sm text-gray-600">Immigration Consultant</p>
-                          </div>
-                        </div>
-                        <div className="space-y-2 mb-4">
-                          <p className="text-sm text-gray-600">
-                            <strong>Specializations:</strong> Partner Visas, Humanitarian Visas
-                          </p>
-                          <p className="text-sm text-gray-600">
-                            <strong>Languages:</strong> English, Portuguese
-                          </p>
-                          <p className="text-sm text-gray-600">
-                            <strong>Experience:</strong> 6 years
-                          </p>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-1">
-                            <span className="text-yellow-400">★</span>
-                            <span className="text-sm text-gray-600">4.7 (18 reviews)</span>
-                          </div>
-                          <Button size="sm" className="bg-green-600 hover:bg-green-700">
-                            View Profile
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
+                    )}
                   </CardContent>
                 </Card>
               </div>
@@ -1137,99 +1201,7 @@ export default function ClientDashboard() {
               </div>
             )}
 
-            {activeMainTab === 'resources' && (
-              <div className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Immigration Resources</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-6">
-                      {/* Resource Categories */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
-                          <div className="flex items-center gap-3 mb-4">
-                            <FileTextIcon className="w-8 h-8 text-blue-600" />
-                            <h3 className="font-semibold text-gray-900">Visa Guides</h3>
-                          </div>
-                          <p className="text-sm text-gray-600 mb-4">
-                            Comprehensive guides for different visa types including requirements, documents, and application processes.
-                          </p>
-                          <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
-                            View Guides
-                          </Button>
-                        </div>
 
-                        <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
-                          <div className="flex items-center gap-3 mb-4">
-                            <FileTextIcon className="w-8 h-8 text-green-600" />
-                            <h3 className="font-semibold text-gray-900">Document Templates</h3>
-                          </div>
-                          <p className="text-sm text-gray-600 mb-4">
-                            Ready-to-use templates for common immigration documents and forms.
-                          </p>
-                          <Button size="sm" className="bg-green-600 hover:bg-green-700">
-                            Download Templates
-                          </Button>
-                        </div>
-
-                        <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
-                          <div className="flex items-center gap-3 mb-4">
-                            <FileTextIcon className="w-8 h-8 text-purple-600" />
-                            <h3 className="font-semibold text-gray-900">Checklists</h3>
-                          </div>
-                          <p className="text-sm text-gray-600 mb-4">
-                            Step-by-step checklists to ensure you have everything ready for your application.
-                          </p>
-                          <Button size="sm" className="bg-purple-600 hover:bg-purple-700">
-                            View Checklists
-                          </Button>
-                        </div>
-
-                        <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
-                          <div className="flex items-center gap-3 mb-4">
-                            <FileTextIcon className="w-8 h-8 text-orange-600" />
-                            <h3 className="font-semibold text-gray-900">FAQs</h3>
-                          </div>
-                          <p className="text-sm text-gray-600 mb-4">
-                            Frequently asked questions about immigration processes and requirements.
-                          </p>
-                          <Button size="sm" className="bg-orange-600 hover:bg-orange-700">
-                            Read FAQs
-                          </Button>
-                        </div>
-
-                        <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
-                          <div className="flex items-center gap-3 mb-4">
-                            <FileTextIcon className="w-8 h-8 text-red-600" />
-                            <h3 className="font-semibold text-gray-900">Legal Updates</h3>
-                          </div>
-                          <p className="text-sm text-gray-600 mb-4">
-                            Latest updates on immigration laws, policies, and procedural changes.
-                          </p>
-                          <Button size="sm" className="bg-red-600 hover:bg-red-700">
-                            Read Updates
-                          </Button>
-                        </div>
-
-                        <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
-                          <div className="flex items-center gap-3 mb-4">
-                            <FileTextIcon className="w-8 h-8 text-indigo-600" />
-                            <h3 className="font-semibold text-gray-900">Success Stories</h3>
-                          </div>
-                          <p className="text-sm text-gray-600 mb-4">
-                            Real stories from clients who successfully obtained their visas.
-                          </p>
-                          <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700">
-                            Read Stories
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
 
             {activeMainTab === 'messages' && (
               <div className="space-y-6">
