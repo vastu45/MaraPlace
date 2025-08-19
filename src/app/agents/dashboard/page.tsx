@@ -37,11 +37,7 @@ export default function AgentDashboard() {
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const profileDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Debug session status
-  useEffect(() => {
-    console.log('Session status:', status);
-    console.log('Session data:', session);
-  }, [session, status]);
+
 
   // Close profile dropdown when clicking outside
   useEffect(() => {
@@ -424,7 +420,6 @@ export default function AgentDashboard() {
   };
 
   const handleLogout = async () => {
-    console.log('Logout function called');
     setProfileDropdownOpen(false);
     
     try {
@@ -437,16 +432,13 @@ export default function AgentDashboard() {
       });
       
       if (response.ok) {
-        console.log('SignOut API call successful');
         // Redirect to home page
         window.location.href = '/';
       } else {
-        console.error('SignOut API call failed');
         // Fallback: redirect to login page
         window.location.href = '/login';
       }
     } catch (error) {
-      console.error('Logout error:', error);
       // Fallback: redirect to login page
       window.location.href = '/login';
     }
@@ -827,13 +819,6 @@ export default function AgentDashboard() {
               </h1>
             </div>
                           <div className="flex items-center gap-4">
-                {/* Temporary test logout button */}
-                <button 
-                  onClick={handleLogout}
-                  className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700"
-                >
-                  Test Logout
-                </button>
                 <button className="relative p-2 text-gray-600 hover:text-purple-600 transition-colors duration-200 hover:bg-purple-50 rounded-lg">
                   <BellIcon className="w-5 h-5" />
                   {unreadBookingsCount > 0 && (
