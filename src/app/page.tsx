@@ -21,13 +21,22 @@ export default function Home() {
         .filter(agent => agent.status === 'APPROVED')
         .sort((a, b) => (b.rating || 0) - (a.rating || 0))
         .slice(0, 4)
-        .map(agent => ({
+        .map(agent => {
+          // Debug: Log agent data to see what's available
+          console.log('Agent Debug:', {
+            name: agent.name,
+            image: agent.image,
+            hasImage: !!agent.image,
+            imageType: typeof agent.image
+          });
+          
+          return {
           id: agent.id,
           name: agent.name,
           company: agent.businessName || 'Independent Specialist',
           registration: agent.maraNumber ? `MARN ${agent.maraNumber}` : 'Registration Pending',
           logo: agent.businessName ? agent.businessName.split(' ').map(word => word[0]).join('').slice(0, 4) : 'SPEC',
-          image: agent.image || '/api/placeholder/100/100',
+            image: agent.image || undefined,
           rating: agent.rating || 0,
           totalReviews: agent.totalReviews || 0,
           specializations: agent.specializations || [],
@@ -36,7 +45,8 @@ export default function Home() {
           experience: agent.experience || 0,
           languages: agent.languages || [],
           consultationFee: agent.consultationFee || 0
-        }))
+          };
+        })
     : [
         {
           id: '1',

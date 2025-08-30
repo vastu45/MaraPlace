@@ -218,12 +218,13 @@ export default function HeroSection({
                 >
                   <span>Search specialists</span>
                   <svg 
-                    className="w-4 h-4 group-hover:translate-x-1 transition-transform" 
+                    className="w-6 h-6 group-hover:translate-x-1 transition-transform" 
                     fill="none" 
-                    stroke="currentColor" 
+                    stroke="#10B981" 
                     viewBox="0 0 24 24"
+                    style={{ strokeWidth: 3 }}
                   >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
                   </svg>
                 </Button>
               </div>
@@ -232,7 +233,7 @@ export default function HeroSection({
         )}
 
         {/* Call to Action */}
-        <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center items-center">
+        <div className="mt-8 flex justify-center items-center">
           <Button 
             asChild
             style={{ 
@@ -243,26 +244,17 @@ export default function HeroSection({
           >
             <a href="/agents">Browse All Specialists</a>
           </Button>
-          <Button 
-            asChild
-            variant="outline"
-            style={{ 
-              borderColor: 'white',
-              color: 'white'
-            }} 
-            className="px-8 py-3 hover:bg-white hover:text-gray-900 transition-all duration-200"
-          >
-            <a href="/agent-register">Register as Specialist</a>
-          </Button>
         </div>
       </div>
 
-      {/* Scroll Indicator */}
-      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
-        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+            {/* Scroll Indicator */}
+      <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce z-50">
+        <svg className="w-16 h-16 text-green-500" fill="none" stroke="#10B981" viewBox="0 0 24 24" style={{ strokeWidth: 4 }}>
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
         </svg>
       </div>
     </section>
   );
 }
+
+

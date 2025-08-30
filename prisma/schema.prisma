@@ -98,6 +98,31 @@ enum PaymentStatus {
   REFUNDED
 }
 
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  subcategories Subcategory[]
+}
+
+model Subcategory {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  categoryId  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([categoryId, name])
+}
+
 enum PaymentMethod {
   CREDIT_CARD
   DEBIT_CARD
@@ -164,6 +189,28 @@ model AgentProfile {
   services              Service[]
   documents             Document[]
   favorites             Favorite[]
+  profileUpdates        ProfileUpdate[] // New relation for pending updates
+  calendarConnections   CalendarConnection[]
+}
+
+// New model for profile updates that need admin approval
+model ProfileUpdate {
+  id            String           @id @default(cuid())
+  agentId       String
+  agent         AgentProfile     @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  status        UpdateStatus     @default(PENDING)
+  updatedFields Json             // Store the fields that were updated
+  adminNotes    String?          // Notes from admin when approving/rejecting
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  reviewedBy    String?          // Admin ID who reviewed the update
+  reviewedAt    DateTime?        // When the update was reviewed
+}
+
+enum UpdateStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 model Service {
@@ -179,6 +226,7 @@ model Service {
 
   agent       AgentProfile @relation(fields: [agentId], references: [id], onDelete: Cascade)
   bookings    Booking[]
+  availability ServiceAvailability[]
 }
 
 model Availability {
@@ -194,6 +242,22 @@ model Availability {
   agent     AgentProfile @relation(fields: [agentId], references: [id], onDelete: Cascade)
 
   @@unique([agentId, dayOfWeek])
+}
+
+// New model for service-specific availability
+model ServiceAvailability {
+  id        String   @id @default(cuid())
+  serviceId String
+  dayOfWeek Int      // 0 = Sunday, 1 = Monday, etc.
+  startTime String   // Format: "09:00"
+  endTime   String   // Format: "17:00"
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  service   Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@unique([serviceId, dayOfWeek])
 }
 
 model Booking {
@@ -321,4 +385,32 @@ model Notification {
   createdAt DateTime @default(now())
 
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// New model for calendar connections
+model CalendarConnection {
+  id                String              @id @default(cuid())
+  agentId           String
+  provider          CalendarProvider    // GOOGLE, APPLE, OUTLOOK, etc.
+  name              String              // Display name for the calendar
+  calendarId        String              // External calendar ID
+  accessToken       String              @db.Text
+  refreshToken      String?             @db.Text
+  tokenExpiresAt    DateTime?
+  isActive          Boolean             @default(true)
+  syncEnabled       Boolean             @default(true)
+  lastSyncAt        DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  agent             AgentProfile        @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@unique([agentId, provider, calendarId])
+}
+
+enum CalendarProvider {
+  GOOGLE
+  APPLE
+  OUTLOOK
+  OFFICE365
 } 

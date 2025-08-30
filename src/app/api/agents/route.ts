@@ -157,13 +157,26 @@ export async function GET(request: NextRequest) {
         ? agent.reviews.reduce((sum: number, review: any) => sum + review.rating, 0) / agent.reviews.length
         : agent.rating || 0
 
+      // Debug: Log image information for each agent
+      const userImage = agent.user.image;
+      const photoDoc = agent.documents.find((doc: any) => doc.type === 'photo');
+      const finalImage = userImage || photoDoc?.url || null;
+      
+      console.log('Agent Image Debug:', {
+        name: agent.user.name,
+        userImage,
+        photoDoc: photoDoc?.url,
+        finalImage,
+        documents: agent.documents.map((doc: any) => ({ type: doc.type, url: doc.url }))
+      });
+
       return {
         id: agent.id,
         userId: agent.userId,
         name: agent.user.name,
         email: agent.user.email,
         phone: agent.user.phone,
-        image: agent.user.image,
+        image: finalImage,
         maraNumber: agent.maraNumber,
         maraVerified: agent.maraVerified,
         businessName: agent.businessName,

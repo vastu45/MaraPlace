@@ -42,6 +42,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         businessCity: agent.businessCity,
         businessState: agent.businessState,
         businessAddress: agent.businessAddress,
+        abn: agent.abn,
         bio: agent.bio,
         calendlyUrl: agent.calendlyUrl,
         specializations: agent.specializations,

@@ -36,7 +36,8 @@ export async function GET(request: NextRequest) {
       suspendedUsers,
       totalRevenue,
       monthlyRevenue,
-      pendingVerifications
+      pendingVerifications,
+      pendingProfileUpdates
     ] = await Promise.all([
       // Total users
       prisma.user.count(),
@@ -90,6 +91,11 @@ export async function GET(request: NextRequest) {
           isVerified: false,
           type: { in: ['maraCertificate', 'businessRegistration', 'photo'] }
         }
+      }),
+      
+      // Pending profile updates
+      prisma.profileUpdate.count({
+        where: { status: 'PENDING' }
       })
     ]);
 
@@ -101,7 +107,8 @@ export async function GET(request: NextRequest) {
       suspendedUsers: suspendedUsers || 0, // Fallback if no suspended status
       totalRevenue: totalRevenue._sum.amount || 0,
       monthlyRevenue: monthlyRevenue._sum.amount || 0,
-      pendingVerifications
+      pendingVerifications,
+      pendingProfileUpdates
     });
 
   } catch (error) {

@@ -1,9 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
+import dynamic from 'next/dynamic';
+
+const ServiceManager = dynamic(() => import("@/components/ServiceManager"), {
+  ssr: false,
+  loading: () => <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">Loading ServiceManager...</div>
+});
+import { useSession } from "next-auth/react";
+
+interface Service {
+  id?: string;
+  name: string;
+  description: string;
+  price: number;
+  duration: number;
+  isActive: boolean;
+}
 
 const initialProfile = {
   fullName: "",
@@ -27,11 +43,14 @@ const initialProfile = {
 };
 
 export default function EditProfile() {
+  const { data: session } = useSession();
   const [profile, setProfile] = useState(initialProfile);
   const [logoPreview, setLogoPreview] = useState("");
   const [photoPreview, setPhotoPreview] = useState("");
   const [consultancyFee, setConsultancyFee] = useState("");
   const [agreementUploaded, setAgreementUploaded] = useState(false);
+  const [services, setServices] = useState<Service[]>([]);
+  const [loading, setLoading] = useState(true);
   const [availability, setAvailability] = useState([
     { day: "Mon", start: "09:00", end: "17:00", unavailable: false },
     { day: "Tue", start: "09:00", end: "17:00", unavailable: false },
@@ -46,6 +65,85 @@ export default function EditProfile() {
     setAvailability(prev => prev.map((d, i) =>
       i === idx ? { ...d, [field]: value, ...(field === 'unavailable' && value ? { start: "09:00", end: "17:00" } : {}) } : d
     ));
+  };
+
+  // Fetch agent services on component mount
+  useEffect(() => {
+    console.log("Session:", session);
+    if (session?.user) {
+      console.log("Fetching agent services...");
+      fetchAgentServices();
+    }
+  }, [session]);
+
+  const [agentId, setAgentId] = useState<string | null>(null);
+
+  const fetchAgentServices = async () => {
+    try {
+      console.log("Fetching agent data...");
+      // Get agent profile ID from session or fetch it
+      const agentResponse = await fetch('/api/agents/me');
+      console.log("Agent response status:", agentResponse.status);
+      
+      if (agentResponse.ok) {
+        const agentData = await agentResponse.json();
+        console.log("Agent data:", agentData);
+        const currentAgentId = agentData.agent?.id;
+        console.log("Agent ID:", currentAgentId);
+        setAgentId(currentAgentId);
+        
+        if (currentAgentId) {
+          console.log("Fetching services for agent:", currentAgentId);
+          const servicesResponse = await fetch(`/api/agents/${currentAgentId}/services`);
+          console.log("Services response status:", servicesResponse.status);
+          
+          if (servicesResponse.ok) {
+            const servicesData = await servicesResponse.json();
+            console.log("Services data:", servicesData);
+            setServices(servicesData.services || []);
+          } else {
+            console.error("Failed to fetch services:", servicesResponse.statusText);
+          }
+        } else {
+          console.log("No agent ID found");
+        }
+      } else {
+        console.error("Failed to fetch agent data:", agentResponse.statusText);
+      }
+    } catch (error) {
+      console.error('Error fetching services:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleServicesChange = async (updatedServices: Service[]) => {
+    try {
+      if (agentId) {
+        // Update local state immediately for better UX
+        setServices(updatedServices);
+
+        // Send updates to server
+        const response = await fetch(`/api/agents/${agentId}/services`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ services: updatedServices }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to update services');
+        }
+
+        const data = await response.json();
+        // Update with server response to get proper IDs
+        setServices(data.services || updatedServices);
+      }
+    } catch (error) {
+      console.error('Error updating services:', error);
+      alert('Failed to update services. Please try again.');
+    }
   };
 
   const handleAgreementUpload = () => {
@@ -155,14 +253,57 @@ export default function EditProfile() {
               {/* --- Consultancy Settings Fields --- */}
               <div className="md:col-span-2 border-t pt-6 mt-6">
                 <h2 className="text-xl font-bold mb-4 text-green-700">Consultancy Settings</h2>
+                
+                {/* Service Management */}
                 <div className="mb-6">
-                  <label className="block text-sm font-medium mb-1">Consultancy fee per session (AUD)</label>
-                  <input type="number" min="0" step="0.01" value={consultancyFee} onChange={e => setConsultancyFee(e.target.value)} className="w-full border rounded px-3 py-2" />
+                  <div className="text-sm text-gray-600 mb-2">
+                    Debug Info: Loading={loading.toString()}, AgentId={agentId || 'null'}, Services={services.length}
+                  </div>
+                  
+                  {/* Simple Test ServiceManager */}
+                  <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <h3 className="text-lg font-semibold mb-2 text-blue-800">Service Management Test</h3>
+                    <p className="text-sm text-blue-600 mb-4">If you can see this section, the ServiceManager component should appear below:</p>
+                    <div className="p-4 bg-white border rounded-lg">
+                      <h4 className="font-semibold mb-2">Test Service Manager Component</h4>
+                      <p className="text-sm text-gray-600 mb-4">This should show the service management interface:</p>
+                      <ServiceManager
+                        agentId="test-agent-id"
+                        services={[
+                          {
+                            id: "test-1",
+                            name: "Test Service",
+                            description: "This is a test service",
+                            price: 100,
+                            duration: 60,
+                            isActive: true
+                          }
+                        ]}
+                        onServicesChange={(services) => {
+                          console.log("Test services changed:", services);
+                          alert("Test service updated!");
+                        }}
+                      />
+                    </div>
+                  </div>
+                  
+                  {!loading && agentId ? (
+                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                      <h3 className="text-lg font-semibold mb-2 text-green-800">Real Service Manager</h3>
+                      <ServiceManager
+                        agentId={agentId}
+                        services={services}
+                        onServicesChange={handleServicesChange}
+                      />
+                    </div>
+                  ) : (
+                    <div className="p-4 bg-gray-100 rounded-lg text-center">
+                      {loading ? "Loading services..." : "No agent ID found - API may not be working"}
+                    </div>
+                  )}
                 </div>
-                <div className="mb-6">
-                  <label className="block text-sm font-medium mb-1">Time per session</label>
-                  <div className="bg-gray-50 border rounded px-3 py-2">30 Minutes</div>
-                </div>
+
+                {/* Availability Settings */}
                 <div className="mb-6">
                   <label className="block text-sm font-medium mb-1">Availability</label>
                   <div className="space-y-2">
@@ -177,6 +318,8 @@ export default function EditProfile() {
                     ))}
                   </div>
                 </div>
+
+                {/* Calendar Integration */}
                 <div className="mb-6">
                   <label className="block text-sm font-medium mb-1">Calendar setting</label>
                   <div className="flex items-center gap-3 bg-gray-50 border rounded px-3 py-2">
@@ -185,6 +328,8 @@ export default function EditProfile() {
                     <Button size="sm" className="ml-auto">Connect</Button>
                   </div>
                 </div>
+
+                {/* Terms & Conditions */}
                 <div className="mb-6">
                   <label className="block text-sm font-medium mb-1">Consultancy Terms & Conditions Agreement</label>
                   <div className="flex items-center gap-3 bg-gray-50 border rounded px-3 py-2">

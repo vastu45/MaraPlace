@@ -75,6 +75,16 @@ export async function GET(request: NextRequest) {
               name: true,
               isVerified: true,
             }
+          },
+          services: {
+            select: {
+              id: true,
+              name: true,
+              description: true,
+              price: true,
+              duration: true,
+              isActive: true,
+            }
           }
         },
         orderBy: { createdAt: 'desc' },
@@ -97,6 +107,7 @@ export async function GET(request: NextRequest) {
       status: agent.status,
       calendlyUrl: agent.calendlyUrl,
       documents: agent.documents,
+      services: agent.services,
       createdAt: agent.user.createdAt.toISOString(),
     }));
 

@@ -5,12 +5,23 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import AdminLayout from "@/components/AdminLayout";
+import ServiceManager from "@/components/ServiceManager";
 
 interface Document {
   id: string;
   type: string;
   url: string;
   name: string;
+}
+
+interface Service {
+  id?: string;
+  name: string;
+  description: string;
+  price: number;
+  duration: number;
+  isActive: boolean;
 }
 
 interface Agent {
@@ -23,6 +34,7 @@ interface Agent {
   abn?: string;
   maraNumber?: string;
   documents?: Document[];
+  services?: Service[];
   status: string;
   suspendReason?: string;
   calendlyUrl?: string;
@@ -36,53 +48,7 @@ const statusOptions = [
   { label: "Suspended", value: "SUSPENDED" },
 ];
 
-function AdminNavbar() {
-  const { data: session } = useSession();
 
-  return (
-    <nav className="flex items-center justify-between px-8 py-4 border-b bg-white dark:bg-gray-900 shadow-sm sticky top-0 z-10">
-      <div className="flex items-center gap-8">
-        <span className="text-2xl font-extrabold text-green-600 tracking-tight">MaraPlace Admin</span>
-        <div className="hidden md:flex gap-4 text-sm text-gray-700 dark:text-gray-200">
-          <Link href="/admin" className="hover:text-green-600">Dashboard</Link>
-          <Link href="/admin/users" className="hover:text-green-600">Users</Link>
-          <Link href="/admin/agents" className="hover:text-green-600 font-medium">Agents</Link>
-          <Link href="/admin/verifications" className="hover:text-green-600">Verifications</Link>
-          <Link href="/admin/payments" className="hover:text-green-600">Payments</Link>
-          <Link href="/admin/disputes" className="hover:text-green-600">Disputes</Link>
-        </div>
-      </div>
-      <div className="flex items-center gap-4">
-        <span className="text-sm text-gray-600">
-          Welcome, {session?.user?.name || 'Admin'}
-        </span>
-        <Button 
-          variant="outline" 
-          asChild
-        >
-          <Link href="/">Back to Site</Link>
-        </Button>
-      </div>
-    </nav>
-  );
-}
-
-function Footer() {
-  return (
-    <footer className="bg-white dark:bg-gray-900 border-t py-8 mt-12 text-center text-gray-600 dark:text-gray-400">
-      <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 px-4">
-        <div className="font-bold text-green-600 text-lg">MaraPlace</div>
-        <div className="flex gap-6 text-sm">
-          <Link href="#" className="hover:text-green-600">About</Link>
-          <Link href="#" className="hover:text-green-600">Contact</Link>
-          <Link href="#" className="hover:text-green-600">Terms</Link>
-          <Link href="#" className="hover:text-green-600">Privacy</Link>
-        </div>
-        <div className="text-xs mt-2 md:mt-0">&copy; {new Date().getFullYear()} MaraPlace. All rights reserved.</div>
-      </div>
-    </footer>
-  );
-}
 
 export default function AdminAgents() {
   const { data: session, status } = useSession();
@@ -95,6 +61,8 @@ export default function AdminAgents() {
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<any>({});
+  const [agentServices, setAgentServices] = useState<Record<string, Service[]>>({});
+  const [showServices, setShowServices] = useState<string | null>(null);
 
   useEffect(() => {
     // Check if user is admin
@@ -117,6 +85,16 @@ export default function AdminAgents() {
         })
         .then(data => {
           setAgents(data.agents || []);
+          
+          // Initialize services for each agent
+          const servicesMap: Record<string, Service[]> = {};
+          data.agents?.forEach((agent: Agent) => {
+            if (agent.services) {
+              servicesMap[agent.id] = agent.services;
+            }
+          });
+          setAgentServices(servicesMap);
+          
           setLoading(false);
         })
         .catch((error) => {
@@ -127,23 +105,33 @@ export default function AdminAgents() {
     }
   }, [session, status, router, statusFilter]);
 
+  // State for modal dialogs
+  const [showSuspendModal, setShowSuspendModal] = useState(false);
+  const [showCalendlyModal, setShowCalendlyModal] = useState(false);
+  const [pendingAction, setPendingAction] = useState<{ id: string; action: string; currentUrl?: string } | null>(null);
+  const [suspendReason, setSuspendReason] = useState("");
+  const [calendlyUrl, setCalendlyUrl] = useState("");
+
   async function updateStatus(id: string, status: string) {
-    let suspendReason = undefined;
     if (status === "SUSPENDED") {
-      suspendReason = window.prompt("Please provide a reason for suspension:");
-      if (!suspendReason || !suspendReason.trim()) {
-        alert("Suspension reason is required.");
+      setPendingAction({ id, action: "suspend" });
+      setShowSuspendModal(true);
         return;
       }
+    
+    // For non-suspend actions, proceed directly
+    await performStatusUpdate(id, status);
     }
+
+  async function performStatusUpdate(id: string, status: string, reason?: string) {
     setActionLoading(id + status);
     const res = await fetch(`/api/admin/agents/${id}/status`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status, suspendReason }),
+      body: JSON.stringify({ status, suspendReason: reason }),
     });
     if (res.ok) {
-      setAgents(agents => agents.map(a => a.id === id ? { ...a, status, suspendReason: status === "SUSPENDED" ? suspendReason : undefined } : a));
+      setAgents(agents => agents.map(a => a.id === id ? { ...a, status, suspendReason: status === "SUSPENDED" ? reason : undefined } : a));
     } else {
       alert("Failed to update status");
     }
@@ -151,21 +139,46 @@ export default function AdminAgents() {
   }
 
   async function updateCalendlyUrl(id: string, currentUrl: string) {
-    const calendlyUrl = window.prompt("Enter Calendly booking link (leave blank to remove):", currentUrl || "");
-    if (calendlyUrl === null) return; // Cancelled
+    setPendingAction({ id, action: "calendly", currentUrl });
+    setCalendlyUrl(currentUrl || "");
+    setShowCalendlyModal(true);
+  }
+
+  async function performCalendlyUpdate(id: string, url: string) {
     setActionLoading(id + "CALENDLY");
     const res = await fetch(`/api/agents/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ calendlyUrl }),
+      body: JSON.stringify({ calendlyUrl: url }),
     });
     if (res.ok) {
-      setAgents(agents => agents.map(a => a.id === id ? { ...a, calendlyUrl } : a));
+      setAgents(agents => agents.map(a => a.id === id ? { ...a, calendlyUrl: url } : a));
     } else {
       alert("Failed to update Calendly link");
     }
     setActionLoading(null);
   }
+
+  const handleSuspendConfirm = async () => {
+    if (!pendingAction || !suspendReason.trim()) {
+      alert("Suspension reason is required.");
+      return;
+    }
+    
+    await performStatusUpdate(pendingAction.id, "SUSPENDED", suspendReason.trim());
+    setShowSuspendModal(false);
+    setPendingAction(null);
+    setSuspendReason("");
+  };
+
+  const handleCalendlyConfirm = async () => {
+    if (!pendingAction) return;
+    
+    await performCalendlyUpdate(pendingAction.id, calendlyUrl);
+    setShowCalendlyModal(false);
+    setPendingAction(null);
+    setCalendlyUrl("");
+  };
 
   function startEdit(agent: Agent) {
     setEditingId(agent.id);
@@ -176,6 +189,66 @@ export default function AdminAgents() {
     setEditingId(null);
     setEditForm({});
   }
+
+  const fetchAgentServices = async (agentId: string) => {
+    try {
+      const response = await fetch(`/api/agents/${agentId}/services`);
+      if (response.ok) {
+        const data = await response.json();
+        setAgentServices(prev => ({
+          ...prev,
+          [agentId]: data.services || []
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching services:', error);
+    }
+  };
+
+  const handleServicesChange = async (agentId: string, services: Service[]) => {
+    try {
+      // Update local state immediately for better UX
+      setAgentServices(prev => ({
+        ...prev,
+        [agentId]: services
+      }));
+
+      // Send updates to server
+      const response = await fetch(`/api/agents/${agentId}/services`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ services }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update services');
+      }
+
+      const data = await response.json();
+      // Update with server response to get proper IDs
+      setAgentServices(prev => ({
+        ...prev,
+        [agentId]: data.services || services
+      }));
+    } catch (error) {
+      console.error('Error updating services:', error);
+      alert('Failed to update services. Please try again.');
+    }
+  };
+
+  const toggleServices = (agentId: string) => {
+    if (showServices === agentId) {
+      setShowServices(null);
+    } else {
+      setShowServices(agentId);
+      // Fetch services if not already loaded
+      if (!agentServices[agentId]) {
+        fetchAgentServices(agentId);
+      }
+    }
+  };
   function handleEditChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
     const { name, value } = e.target;
     setEditForm((f: any) => ({ ...f, [name]: value }));
@@ -210,13 +283,10 @@ export default function AdminAgents() {
 
   if (status === "loading") {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <AdminNavbar />
-        <div className="flex items-center justify-center min-h-screen">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
             <p>Loading admin panel...</p>
-          </div>
         </div>
       </div>
     );
@@ -227,9 +297,9 @@ export default function AdminAgents() {
   }
 
   return (
-    <div>
-      <AdminNavbar />
-      <div className="max-w-5xl mx-auto py-12 px-4">
+    <AdminLayout>
+      <div className="p-6">
+        <div className="max-w-5xl mx-auto">
         <h1 className="text-2xl font-bold mb-6">Agent Management</h1>
         <div className="mb-4 flex gap-2 items-center">
           <span className="font-medium">Filter by status:</span>
@@ -311,6 +381,14 @@ export default function AdminAgents() {
                       disabled={editingId === agent.id}
                     >
                       Edit
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => toggleServices(agent.id)}
+                      className="bg-blue-50 text-blue-700 hover:bg-blue-100"
+                    >
+                      {showServices === agent.id ? "Hide Services" : "Manage Services"}
                     </Button>
                   </td>
                 </tr>
@@ -444,6 +522,17 @@ export default function AdminAgents() {
                           </div>
                         </div>
                       )}
+                      
+                      {/* Services Management Section */}
+                      {showServices === agent.id && (
+                        <div className="mt-6 border-t pt-6">
+                          <ServiceManager
+                            agentId={agent.id}
+                            services={agentServices[agent.id] || []}
+                            onServicesChange={(services) => handleServicesChange(agent.id, services)}
+                          />
+                        </div>
+                      )}
                     </td>
                   </tr>
                 )}
@@ -453,8 +542,77 @@ export default function AdminAgents() {
         </table>
         {!loading && agents.length === 0 && <div className="text-center mt-8">No agents found.</div>}
       </div>
-      <Footer />
+      </div>
+
+      {/* Suspend Agent Modal */}
+      {showSuspendModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold mb-4">Suspend Agent</h3>
+            <p className="text-gray-600 mb-4">Please provide a reason for suspending this agent:</p>
+            <textarea
+              value={suspendReason}
+              onChange={(e) => setSuspendReason(e.target.value)}
+              className="w-full border border-gray-300 rounded px-3 py-2 min-h-[100px] mb-4"
+              placeholder="Enter suspension reason..."
+            />
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowSuspendModal(false);
+                  setPendingAction(null);
+                  setSuspendReason("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSuspendConfirm}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                Suspend Agent
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Calendly URL Modal */}
+      {showCalendlyModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold mb-4">Update Calendly Link</h3>
+            <p className="text-gray-600 mb-4">Enter the Calendly booking link (leave blank to remove):</p>
+            <input
+              type="url"
+              value={calendlyUrl}
+              onChange={(e) => setCalendlyUrl(e.target.value)}
+              className="w-full border border-gray-300 rounded px-3 py-2 mb-4"
+              placeholder="https://calendly.com/..."
+            />
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowCalendlyModal(false);
+                  setPendingAction(null);
+                  setCalendlyUrl("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleCalendlyConfirm}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                Update Link
+              </Button>
+            </div>
+          </div>
     </div>
+      )}
+    </AdminLayout>
   );
 }
 

@@ -9,7 +9,55 @@ export default function Navbar() {
   const { data: session } = useSession();
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [profilePicture, setProfilePicture] = useState("");
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Fetch categories
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await fetch("/api/categories");
+        if (res.ok) {
+          const data = await res.json();
+          setCategories(data.categories || []);
+        }
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  // Fetch profile picture when session changes
+  useEffect(() => {
+    const fetchProfilePicture = async () => {
+      if (session?.user?.email) {
+        try {
+          const res = await fetch("/api/agents/me");
+          if (res.ok) {
+            const data = await res.json();
+            const agent = data.user?.agentProfile;
+            
+            if (agent?.documents) {
+              const photoDoc = agent.documents.find((d: any) => d.type === "photo");
+              if (photoDoc) {
+                setProfilePicture(photoDoc.url);
+              }
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching profile picture:", error);
+        }
+      }
+    };
+
+    fetchProfilePicture();
+  }, [session]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -25,20 +73,7 @@ export default function Navbar() {
     };
   }, []);
 
-  const categories = {
-    "Immigration": [
-      { name: "Lawyers", href: "/agents?category=immigration&subcategory=lawyers" },
-      { name: "Migration Agents", href: "/agents?category=immigration&subcategory=migration-agents" },
-      { name: "Counselors", href: "/agents?category=immigration&subcategory=counselors" },
-      { name: "Visa Consultants", href: "/agents?category=immigration&subcategory=visa-consultants" }
-    ],
-    "Real Estate": [
-      { name: "Real Estate Agents", href: "/agents?category=real-estate&subcategory=agents" },
-      { name: "Property Managers", href: "/agents?category=real-estate&subcategory=property-managers" },
-      { name: "Buyer's Agents", href: "/agents?category=real-estate&subcategory=buyers-agents" },
-      { name: "Property Consultants", href: "/agents?category=real-estate&subcategory=consultants" }
-    ]
-  };
+
 
   return (
     <nav className="flex items-center justify-between px-8 py-4 border-b bg-white dark:bg-gray-900 shadow-sm sticky top-0 z-10">
@@ -72,34 +107,40 @@ export default function Navbar() {
                 onMouseLeave={() => setCategoriesOpen(false)}
               >
                 <div className="p-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    {Object.entries(categories).map(([category, subcategories]) => (
-                      <div key={category} className="space-y-2">
-                        <h3 className="font-semibold text-gray-900 text-sm border-b border-gray-100 pb-1">
-                          {category}
-                        </h3>
-                        <div className="space-y-1">
-                          {subcategories.map((subcategory) => (
-            <Link 
-                              key={subcategory.name}
-                              href={subcategory.href}
-                              className="block text-sm text-gray-600 hover:text-green-600 hover:bg-gray-50 px-2 py-1 rounded transition-colors"
-                              onClick={() => setCategoriesOpen(false)}
-                            >
-                              {subcategory.name}
-            </Link>
-                          ))}
+                  {loading ? (
+                    <div className="text-center py-4">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-600 mx-auto"></div>
+                      <p className="text-sm text-gray-500 mt-2">Loading categories...</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-4">
+                      {categories.map((category) => (
+                        <div key={category.id} className="space-y-2">
+                          <h3 className="font-semibold text-gray-900 text-sm border-b border-gray-100 pb-1">
+                            {category.name}
+                          </h3>
+                          <div className="space-y-1">
+                            {category.subcategories.map((subcategory) => (
+                              <Link 
+                                key={subcategory.id}
+                                href={`/agents?category=${category.name.toLowerCase()}&subcategory=${subcategory.name.toLowerCase().replace(/\s+/g, '-')}`}
+                                className="block text-sm text-gray-600 hover:text-green-600 hover:bg-gray-50 px-2 py-1 rounded transition-colors"
+                                onClick={() => setCategoriesOpen(false)}
+                              >
+                                {subcategory.name}
+                              </Link>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
           </div>
           
-          <Link href="/agents" className="hover:text-green-600 transition-colors">Find Specialists</Link>
-          <Link href="/jobs" className="hover:text-green-600 transition-colors">Jobs</Link>
+
           </div>
         </div>
 
@@ -110,9 +151,22 @@ export default function Navbar() {
               onClick={() => setDropdownOpen(!dropdownOpen)}
               className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 transition-all duration-200"
             >
-              <div className="w-6 h-6 bg-green-600 rounded-full flex items-center justify-center text-xs font-bold text-white">
+              <div className="w-6 h-6 bg-green-600 rounded-full flex items-center justify-center text-xs font-bold text-white overflow-hidden">
+                {profilePicture ? (
+                  <img 
+                    src={profilePicture} 
+                    alt="Profile" 
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                    }}
+                  />
+                ) : null}
+                <div className={`w-full h-full flex items-center justify-center text-white font-bold text-xs ${profilePicture ? 'hidden' : ''}`}>
                   {(session.user.name || session.user.email || "U").charAt(0).toUpperCase()}
                 </div>
+              </div>
               <span className="font-medium text-sm text-gray-700 dark:text-gray-200">
                   {session.user.name || session.user.email?.split("@")[0] || "Profile"}
                 </span>

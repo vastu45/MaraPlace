@@ -8,12 +8,31 @@ export async function GET(
 ) {
   try {
     const { searchParams } = new URL(request.url);
-    if (searchParams.get("weekly") === "1") {
-      // Return all weekly hours for the agent
-      const weekly = await prisma.availability.findMany({
-        where: { agentId: params.id },
-        orderBy: { dayOfWeek: "asc" },
-      });
+    const serviceId = searchParams.get("serviceId");
+    
+    if (searchParams.get("weekly") === "1" || serviceId) {
+      // Return weekly hours for the agent (either global or service-specific)
+      let weekly;
+      
+      if (serviceId) {
+        // Get service-specific availability
+        weekly = await prisma.serviceAvailability.findMany({
+          where: { 
+            serviceId: serviceId,
+            service: {
+              agentId: params.id
+            }
+          },
+          orderBy: { dayOfWeek: "asc" },
+        });
+      } else {
+        // Get global availability
+        weekly = await prisma.availability.findMany({
+          where: { agentId: params.id },
+          orderBy: { dayOfWeek: "asc" },
+        });
+      }
+      
       const weeklyHours = Array(7)
         .fill(null)
         .map((_, i) => {
@@ -38,6 +57,7 @@ export async function GET(
     const dayOfWeek = getDay(date); // 0 = Sunday, 1 = Monday, etc.
     
     console.log(`Requested date: ${dateParam}, parsed date: ${date.toISOString()}, day of week: ${dayOfWeek}`);
+    
     // Get agent's availability for this day of the week and their default meeting duration
     const [availability, agentProfile] = await Promise.all([
       prisma.availability.findFirst({
@@ -158,6 +178,73 @@ export async function GET(
   }
 }
 
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const body = await request.json();
+    const { weeklyHours, serviceId } = body;
+    
+    if (weeklyHours) {
+      if (serviceId) {
+        // Save service-specific weekly hours
+        // Remove all existing service-specific availabilities
+        await prisma.serviceAvailability.deleteMany({ 
+          where: { 
+            serviceId: serviceId,
+            service: {
+              agentId: params.id
+            }
+          } 
+        });
+        
+        // Add new service-specific availabilities
+        for (const day of weeklyHours) {
+          if (!day.unavailable && day.slots.length > 0) {
+            for (const slot of day.slots) {
+              await prisma.serviceAvailability.create({
+                data: {
+                  serviceId: serviceId,
+                  dayOfWeek: day.day,
+                  startTime: slot.start,
+                  endTime: slot.end,
+                  isActive: true,
+                },
+              });
+            }
+          }
+        }
+      } else {
+        // Save global weekly hours
+        // Remove all existing weekly availabilities for this agent
+        await prisma.availability.deleteMany({ where: { agentId: params.id } });
+        // Add new ones
+        for (const day of weeklyHours) {
+          if (!day.unavailable && day.slots.length > 0) {
+            for (const slot of day.slots) {
+              await prisma.availability.create({
+                data: {
+                  agentId: params.id,
+                  dayOfWeek: day.day,
+                  startTime: slot.start,
+                  endTime: slot.end,
+                  isActive: true,
+                },
+              });
+            }
+          }
+        }
+      }
+      return NextResponse.json({ success: true });
+    }
+    return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
+  } catch (error) {
+    console.error('Error saving weekly hours:', error);
+    return NextResponse.json({ error: 'Failed to save weekly hours' }, { status: 500 });
+  }
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -165,7 +252,7 @@ export async function POST(
   try {
     const body = await request.json();
     if (body.weeklyHours) {
-      // Save weekly hours
+      // Save weekly hours (legacy support)
       const weekly = body.weeklyHours;
       // Remove all existing weekly availabilities for this agent
       await prisma.availability.deleteMany({ where: { agentId: params.id } });

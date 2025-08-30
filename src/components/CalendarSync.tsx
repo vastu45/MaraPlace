@@ -1,245 +1,383 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { 
+  Calendar, 
+  RefreshCw, 
+  Plus, 
+  Trash2, 
+  ExternalLink, 
+  XCircle,
+  Settings,
+  Clock
+} from "lucide-react";
 
-interface CalendarProvider {
+interface CalendarConnection {
   id: string;
+  provider: 'GOOGLE' | 'APPLE' | 'OUTLOOK' | 'OFFICE365';
   name: string;
-  icon: string;
-  color: string;
-  description: string;
+  calendarId: string;
+  isActive: boolean;
+  syncEnabled: boolean;
+  lastSyncAt: string | null;
 }
 
-const calendarProviders: CalendarProvider[] = [
-  {
-    id: "google",
-    name: "Google Calendar",
-    icon: "📅",
-    color: "bg-blue-500",
-    description: "Sync with your Google Calendar"
-  },
-  {
-    id: "outlook",
-    name: "Outlook Calendar",
-    icon: "📧",
-    color: "bg-blue-600",
-    description: "Sync with your Outlook Calendar"
-  },
-  {
-    id: "apple",
-    name: "Apple Calendar",
-    icon: "🍎",
-    color: "bg-gray-600",
-    description: "Sync with your Apple Calendar"
-  },
-  {
-    id: "caldav",
-    name: "CalDAV",
-    icon: "📋",
-    color: "bg-green-600",
-    description: "Connect any CalDAV calendar"
-  }
-];
+export default function CalendarSync({ agentId }: { agentId: string }) {
+  const [connections, setConnections] = useState<CalendarConnection[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+  const [showConnectModal, setShowConnectModal] = useState(false);
 
-interface CalendarSyncProps {
-  agentId: string;
-  onConnect?: (provider: string) => void;
-  onDisconnect?: (provider: string) => void;
-}
+  const providers = [
+    {
+      id: 'GOOGLE',
+      name: 'Google Calendar',
+      description: 'Sync with your Google Calendar',
+      icon: '📅',
+      color: 'bg-blue-500',
+      authUrl: '/api/calendar/google/auth'
+    },
+    {
+      id: 'APPLE',
+      name: 'Apple Calendar',
+      description: 'Sync with your Apple Calendar',
+      icon: '🍎',
+      color: 'bg-gray-800',
+      authUrl: '/api/calendar/apple/auth'
+    },
+    {
+      id: 'OUTLOOK',
+      name: 'Outlook Calendar',
+      description: 'Sync with your Outlook Calendar',
+      icon: '📧',
+      color: 'bg-blue-600',
+      authUrl: '/api/calendar/outlook/auth'
+    },
+    {
+      id: 'OFFICE365',
+      name: 'Office 365 Calendar',
+      description: 'Sync with your Office 365 Calendar',
+      icon: '🏢',
+      color: 'bg-red-600',
+      authUrl: '/api/calendar/office365/auth'
+    }
+  ];
 
-export default function CalendarSync({ agentId, onConnect, onDisconnect }: CalendarSyncProps) {
-  const [connectedCalendars, setConnectedCalendars] = useState<string[]>([]);
-  const [connecting, setConnecting] = useState<string | null>(null);
+  useEffect(() => {
+    if (agentId && agentId.trim() !== '') {
+      fetchConnections();
+    } else {
+      setLoading(false);
+    }
+  }, [agentId]);
 
-  const handleConnect = async (provider: string) => {
-    setConnecting(provider);
+  const fetchConnections = async () => {
+    if (!agentId || agentId.trim() === '') {
+      setLoading(false);
+      return;
+    }
     
     try {
-      // In a real implementation, this would redirect to OAuth or open a modal
-      // For now, we'll simulate the connection
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      setConnectedCalendars(prev => [...prev, provider]);
-      onConnect?.(provider);
-      
-      // Show success message
-      alert(`${calendarProviders.find(p => p.id === provider)?.name} connected successfully!`);
+      const response = await fetch(`/api/calendar/connections?agentId=${agentId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setConnections(data.connections || []);
+      }
     } catch (error) {
-      console.error('Error connecting calendar:', error);
-      alert('Failed to connect calendar. Please try again.');
+      console.error('Error fetching calendar connections:', error);
     } finally {
-      setConnecting(null);
+      setLoading(false);
     }
   };
 
-  const handleDisconnect = async (provider: string) => {
+  const handleConnect = async (provider: 'GOOGLE' | 'APPLE' | 'OUTLOOK' | 'OFFICE365') => {
+    if (!agentId || agentId.trim() === '') {
+      alert('Agent ID not available. Please refresh the page and try again.');
+      return;
+    }
+    
+    const providerConfig = providers.find(p => p.id === provider);
+    if (providerConfig) {
+      window.open(`${providerConfig.authUrl}?agentId=${agentId}`, '_blank', 'width=500,height=600');
+    }
+  };
+
+  const handleDisconnect = async (connectionId: string) => {
+    if (!confirm('Are you sure you want to disconnect this calendar?')) return;
+    
     try {
-      // In a real implementation, this would call an API to disconnect
-      setConnectedCalendars(prev => prev.filter(p => p !== provider));
-      onDisconnect?.(provider);
+      const response = await fetch(`/api/calendar/connections/${connectionId}`, {
+        method: 'DELETE'
+      });
       
-      alert(`${calendarProviders.find(p => p.id === provider)?.name} disconnected successfully!`);
+      if (response.ok) {
+        setConnections(prev => prev.filter(conn => conn.id !== connectionId));
+      }
     } catch (error) {
       console.error('Error disconnecting calendar:', error);
-      alert('Failed to disconnect calendar. Please try again.');
     }
   };
 
-  const isConnected = (provider: string) => connectedCalendars.includes(provider);
+  const handleToggleSync = async (connectionId: string, enabled: boolean) => {
+    try {
+      const response = await fetch(`/api/calendar/connections/${connectionId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ syncEnabled: enabled })
+      });
+      
+      if (response.ok) {
+        setConnections(prev => 
+          prev.map(conn => 
+            conn.id === connectionId 
+              ? { ...conn, syncEnabled: enabled }
+              : conn
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Error toggling sync:', error);
+    }
+  };
+
+  const handleSyncNow = async (connectionId: string) => {
+    setSyncing(true);
+    try {
+      const response = await fetch(`/api/calendar/sync/${connectionId}`, {
+        method: 'POST'
+      });
+      
+      if (response.ok) {
+        fetchConnections();
+      }
+    } catch (error) {
+      console.error('Error syncing calendar:', error);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const getProviderIcon = (provider: string) => {
+    const providerConfig = providers.find(p => p.id === provider);
+    return providerConfig?.icon || '📅';
+  };
+
+  const getProviderColor = (provider: string) => {
+    const providerConfig = providers.find(p => p.id === provider);
+    return providerConfig?.color || 'bg-gray-500';
+  };
+
+  const formatLastSync = (lastSyncAt: string | null) => {
+    if (!lastSyncAt) return 'Never';
+    const date = new Date(lastSyncAt);
+    const now = new Date();
+    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+    
+    if (diffInMinutes < 1) return 'Just now';
+    if (diffInMinutes < 60) return `${diffInMinutes} minutes ago`;
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)} hours ago`;
+    return `${Math.floor(diffInMinutes / 1440)} days ago`;
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <span className="ml-2 text-gray-600">Loading calendar connections...</span>
+      </div>
+    );
+  }
+
+  if (!agentId || agentId.trim() === '') {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Agent ID not available</h3>
+          <p className="text-gray-600 mb-4">
+            Please refresh the page or contact support if the issue persists.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
       <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">Calendar Integration</h3>
-        <p className="text-sm text-gray-600 mb-4">
-          Connect your external calendars to automatically sync your availability and prevent double bookings.
-        </p>
+          <h2 className="text-2xl font-bold text-gray-900">Calendar Sync</h2>
+          <p className="text-gray-600 mt-1">
+            Connect your external calendars to automatically sync availability and bookings
+          </p>
+        </div>
+        <Button
+          onClick={() => setShowConnectModal(true)}
+          className="bg-blue-600 hover:bg-blue-700"
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Connect Calendar
+        </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {calendarProviders.map((provider) => (
-          <div
-            key={provider.id}
-            className={`border rounded-lg p-4 transition-all ${
-              isConnected(provider.id)
-                ? 'border-green-500 bg-green-50'
-                : 'border-gray-200 hover:border-gray-300'
-            }`}
-          >
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white ${provider.color}`}>
-                  <span className="text-lg">{provider.icon}</span>
+      {/* Connected Calendars */}
+      <div className="grid gap-4">
+        {connections.length === 0 ? (
+          <div className="text-center py-12 bg-gray-50 rounded-lg">
+            <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">No calendars connected</h3>
+            <p className="text-gray-600 mb-4">
+              Connect your external calendars to automatically sync your availability and bookings.
+            </p>
+            <Button onClick={() => setShowConnectModal(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              Connect Your First Calendar
+            </Button>
+          </div>
+        ) : (
+          connections.map((connection) => (
+            <div key={connection.id} className="border border-gray-200 rounded-lg p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white ${getProviderColor(connection.provider)}`}>
+                    <span className="text-lg">{getProviderIcon(connection.provider)}</span>
                 </div>
                 <div>
-                  <h4 className="font-medium text-gray-900">{provider.name}</h4>
-                  <p className="text-sm text-gray-600">{provider.description}</p>
+                    <h3 className="text-lg font-semibold">{connection.name}</h3>
+                    <p className="text-gray-600">{connection.provider} Calendar</p>
                 </div>
               </div>
-              
-              {isConnected(provider.id) && (
-                <div className="flex items-center gap-2">
-                  <span className="text-green-600 text-sm font-medium">Connected</span>
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <div className="flex items-center space-x-2">
+                  <span className={`px-2 py-1 text-xs rounded-full ${connection.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                    {connection.isActive ? "Active" : "Inactive"}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleSyncNow(connection.id)}
+                    disabled={syncing}
+                  >
+                    <RefreshCw className={`w-4 h-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
+                    Sync Now
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDisconnect(connection.id)}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
                 </div>
+              </div>
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={connection.syncEnabled}
+                    onChange={(e) => handleToggleSync(connection.id, e.target.checked)}
+                    className="rounded"
+                  />
+                  <span className="text-sm text-gray-600">Auto-sync enabled</span>
+                </div>
+                <div className="flex items-center space-x-2 text-sm text-gray-600">
+                  <Clock className="w-4 h-4" />
+                  <span>Last sync: {formatLastSync(connection.lastSyncAt)}</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <ExternalLink className="w-4 h-4 text-gray-400" />
+                  <span className="text-sm text-gray-600">Calendar ID: {connection.calendarId}</span>
+                </div>
+              </div>
+                    </div>
+          ))
               )}
             </div>
 
-            <div className="flex gap-2">
-              {isConnected(provider.id) ? (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDisconnect(provider.id)}
-                    className="flex-1"
-                  >
-                    Disconnect
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => alert('Settings modal would open here')}
-                    className="flex-1"
-                  >
-                    Settings
-                  </Button>
-                </>
-              ) : (
-                <Button
-                  onClick={() => handleConnect(provider.id)}
-                  disabled={connecting === provider.id}
-                  className={`flex-1 ${provider.color.replace('bg-', 'bg-')} hover:${provider.color.replace('bg-', 'bg-')} text-white`}
-                >
-                  {connecting === provider.id ? (
-                    <div className="flex items-center gap-2">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      Connecting...
-                    </div>
-                  ) : (
-                    'Connect'
-                  )}
-                </Button>
-              )}
+      {/* Connect Modal */}
+      {showConnectModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Connect Calendar</h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowConnectModal(false)}
+              >
+                <XCircle className="w-4 h-4" />
+              </Button>
             </div>
+            
+            <div className="space-y-3">
+              {providers.map((provider) => (
+                <button
+                  key={provider.id}
+                  onClick={() => handleConnect(provider.id as any)}
+                  className="w-full flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <div className={`w-8 h-8 rounded flex items-center justify-center text-white ${provider.color}`}>
+                    <span className="text-sm">{provider.icon}</span>
+                  </div>
+                  <div className="flex-1 text-left">
+                    <h4 className="font-medium text-gray-900">{provider.name}</h4>
+                    <p className="text-sm text-gray-600">{provider.description}</p>
           </div>
+                  <ExternalLink className="w-4 h-4 text-gray-400" />
+                </button>
         ))}
       </div>
-
-      {/* Sync Settings */}
-      {connectedCalendars.length > 0 && (
-        <div className="border-t pt-6">
-          <h4 className="text-md font-semibold text-gray-900 mb-4">Sync Settings</h4>
-          
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <label className="font-medium text-gray-700">Sync Direction</label>
-                <p className="text-sm text-gray-600">Choose how calendars sync with each other</p>
-              </div>
-              <select className="border rounded-lg px-3 py-2">
-                <option value="bidirectional">Bidirectional</option>
-                <option value="maraplace_to_external">MaraPlace → External</option>
-                <option value="external_to_maraplace">External → MaraPlace</option>
-              </select>
+            
+            <div className="mt-6 flex justify-end space-x-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowConnectModal(false)}
+              >
+                Cancel
+              </Button>
             </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <label className="font-medium text-gray-700">Sync Frequency</label>
-                <p className="text-sm text-gray-600">How often to check for updates</p>
-              </div>
-              <select className="border rounded-lg px-3 py-2">
-                <option value="5">Every 5 minutes</option>
-                <option value="15">Every 15 minutes</option>
-                <option value="30">Every 30 minutes</option>
-                <option value="60">Every hour</option>
-              </select>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                id="auto-decline"
-                className="rounded border-gray-300"
-                defaultChecked
-              />
-              <label htmlFor="auto-decline" className="text-sm text-gray-700">
-                Automatically decline conflicting appointments
-              </label>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                id="sync-availability"
-                className="rounded border-gray-300"
-                defaultChecked
-              />
-              <label htmlFor="sync-availability" className="text-sm text-gray-700">
-                Sync availability settings
-              </label>
-            </div>
-          </div>
-
-          <div className="mt-6">
-            <Button className="bg-green-600 hover:bg-green-700 text-white">
-              Save Sync Settings
-            </Button>
           </div>
         </div>
       )}
 
-      {/* Help Text */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h4 className="font-medium text-blue-900 mb-2">How Calendar Sync Works</h4>
-        <ul className="text-sm text-blue-800 space-y-1">
-          <li>• Your external calendar events will be checked for conflicts</li>
-          <li>• New bookings will automatically appear in your connected calendars</li>
-          <li>• You can choose which direction to sync (one-way or two-way)</li>
-          <li>• Sync happens automatically in the background</li>
-        </ul>
+      {/* Sync Settings */}
+      <div className="border border-gray-200 rounded-lg p-6">
+        <div className="flex items-center space-x-2 mb-4">
+          <Settings className="w-5 h-5" />
+          <h3 className="text-lg font-semibold">Sync Settings</h3>
+        </div>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+              <h4 className="font-medium text-gray-900">Two-way sync</h4>
+              <p className="text-sm text-gray-600">
+                Bookings created in MaraPlace will be added to your external calendars
+              </p>
+              </div>
+            <input type="checkbox" defaultChecked className="rounded" />
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+              <h4 className="font-medium text-gray-900">Conflict resolution</h4>
+              <p className="text-sm text-gray-600">
+                When there's a conflict, prioritize MaraPlace bookings
+              </p>
+              </div>
+            <input type="checkbox" defaultChecked className="rounded" />
+            </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="font-medium text-gray-900">Auto-sync interval</h4>
+              <p className="text-sm text-gray-600">
+                Sync external calendars every 15 minutes
+              </p>
+            </div>
+            <span className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800">15 min</span>
+          </div>
+        </div>
       </div>
     </div>
   );

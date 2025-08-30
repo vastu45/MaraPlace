@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import AdminLayout from "@/components/AdminLayout";
 import { 
   Users, 
   Search, 
@@ -42,37 +43,7 @@ interface User {
   };
 }
 
-function AdminNavbar() {
-  const { data: session } = useSession();
-  const router = useRouter();
 
-  return (
-    <nav className="flex items-center justify-between px-8 py-4 border-b bg-white dark:bg-gray-900 shadow-sm sticky top-0 z-10">
-      <div className="flex items-center gap-8">
-        <span className="text-2xl font-extrabold text-green-600 tracking-tight">MaraPlace Admin</span>
-        <div className="hidden md:flex gap-4 text-sm text-gray-700 dark:text-gray-200">
-          <Link href="/admin" className="hover:text-green-600">Dashboard</Link>
-          <Link href="/admin/users" className="hover:text-green-600 font-medium">Users</Link>
-          <Link href="/admin/agents" className="hover:text-green-600">Agents</Link>
-          <Link href="/admin/verifications" className="hover:text-green-600">Verifications</Link>
-          <Link href="/admin/payments" className="hover:text-green-600">Payments</Link>
-          <Link href="/admin/disputes" className="hover:text-green-600">Disputes</Link>
-        </div>
-      </div>
-      <div className="flex items-center gap-4">
-        <span className="text-sm text-gray-600">
-          Welcome, {session?.user?.name || 'Admin'}
-        </span>
-        <Button 
-          variant="outline" 
-          asChild
-        >
-          <Link href="/">Back to Site</Link>
-        </Button>
-      </div>
-    </nav>
-  );
-}
 
 export default function AdminUsers() {
   const { data: session, status } = useSession();
@@ -178,13 +149,10 @@ export default function AdminUsers() {
 
   if (status === "loading" || loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <AdminNavbar />
-        <div className="flex items-center justify-center min-h-screen">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
             <p>Loading users...</p>
-          </div>
         </div>
       </div>
     );
@@ -195,10 +163,9 @@ export default function AdminUsers() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <AdminNavbar />
-      
-      <div className="max-w-7xl mx-auto px-4 py-8">
+    <AdminLayout>
+      <div className="p-6">
+        <div className="max-w-7xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">User Management</h1>
           <p className="text-gray-600">Manage all users, change roles, and control account access</p>
@@ -376,6 +343,7 @@ export default function AdminUsers() {
             </div>
           </CardContent>
         </Card>
+        </div>
       </div>
 
       {/* User Detail Modal */}
@@ -431,6 +399,6 @@ export default function AdminUsers() {
           </div>
         </div>
       )}
-    </div>
+    </AdminLayout>
   );
 } 

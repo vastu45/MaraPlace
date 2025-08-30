@@ -1,17 +1,58 @@
-"use client";
+ "use client";
 
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
+import dynamic from 'next/dynamic';
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  LineChart,
+  Line,
+  Area,
+  AreaChart
+} from 'recharts';
+import { 
+  Plus, 
+  MoreHorizontal, 
+  CheckCircle, 
+  Circle, 
+  Clock, 
+  AlertCircle,
+  TrendingUp,
+  Users,
+  DollarSign,
+  Calendar,
+  Star,
+  FileText,
+  ArrowUpRight,
+  ArrowDownRight
+} from 'lucide-react';
+
+const ServiceManager = dynamic(() => import("@/components/ServiceManager"), {
+  ssr: false,
+  loading: () => <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">Loading ServiceManager...</div>
+});
 
 import { BellIcon, DocumentIcon, QuestionMarkCircleIcon, CalendarIcon, UsersIcon, ChartBarIcon, Cog6ToothIcon, CreditCardIcon, ClipboardDocumentListIcon, HomeIcon, FolderIcon, PencilSquareIcon } from "@heroicons/react/24/outline";
 import { CameraIcon } from "@heroicons/react/24/solid";
 import { useRouter } from "next/navigation";
 import ModernCalendarLayout from "../calendar/ModernCalendarLayout";
 import BookingDetailsModal from "@/components/BookingDetailsModal";
-import { ToastContainer } from "@/components/Toast";
+import Toast from "@/components/Toast";
+import CalendarSync from "@/components/CalendarSync";
+import ClientDetailsModal from "@/components/ClientDetailsModal";
+import EnhancedDashboard from "@/components/EnhancedDashboard";
 
 const sidebarLinks = [
   { label: "Dashboard", icon: <HomeIcon className="w-5 h-5" />, tab: "dashboard" },
@@ -19,6 +60,7 @@ const sidebarLinks = [
   { label: "Agreements", icon: <DocumentIcon className="w-5 h-5" />, tab: "agreements" },
   { label: "Clients", icon: <UsersIcon className="w-5 h-5" />, tab: "clients" },
   { label: "Calendar", icon: <CalendarIcon className="w-5 h-5" />, tab: "calendar" },
+  { label: "Calendar Sync", icon: <CalendarIcon className="w-5 h-5" />, tab: "calendar-sync" },
   { label: "Financials", icon: <CreditCardIcon className="w-5 h-5" />, tab: "financials" },
   { label: "Manage", icon: <ChartBarIcon className="w-5 h-5" />, tab: "manage" },
   { label: "Settings", icon: <FolderIcon className="w-5 h-5" />, submenu: [
@@ -34,16 +76,28 @@ const secondaryLinks = [
 
 export default function AgentDashboard() {
   const { data: session, status } = useSession();
+  
+  // Debug session data
+  useEffect(() => {
+    console.log('Session data:', session);
+    console.log('Session status:', status);
+  }, [session, status]);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const profileDropdownRef = useRef<HTMLDivElement>(null);
 
 
 
-  // Close profile dropdown when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target as Node)) {
         setProfileDropdownOpen(false);
+      }
+      
+      // Close notification dropdown when clicking outside
+      const notificationDropdown = document.querySelector('[data-notification-dropdown]');
+      if (notificationDropdown && !notificationDropdown.contains(event.target as Node)) {
+        setShowNotifications(false);
       }
     }
 
@@ -84,9 +138,291 @@ export default function AgentDashboard() {
   const [profile, setProfile] = useState(initialProfile);
   const [logoPreview, setLogoPreview] = useState("");
   const [photoPreview, setPhotoPreview] = useState("");
+  
+  // Debug photo preview state
+  useEffect(() => {
+    console.log('Photo preview state changed:', photoPreview);
+  }, [photoPreview]);
+  
+  // Notification system
+  interface Notification {
+    id: string;
+    type: 'success' | 'info' | 'warning' | 'error';
+    title: string;
+    message: string;
+    timestamp: Date;
+    read: boolean;
+    action?: string;
+  }
+  
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [previousProfile, setPreviousProfile] = useState(initialProfile);
+  const [previousConsultations, setPreviousConsultations] = useState<Consultation[]>([]);
+  
+  // Agent statistics from API
+  const [agentStats, setAgentStats] = useState({
+    totalEarnings: 0,
+    totalBookings: 0,
+    totalReviews: 0,
+    totalCases: 0,
+    totalClients: 0,
+    rating: 0,
+    monthlyData: []
+  });
+
+  // Todo state
+  const [todos, setTodos] = useState([
+    { id: 1, text: "Review pending client applications", completed: false, priority: "high" },
+    { id: 2, text: "Follow up with recent consultations", completed: false, priority: "medium" },
+    { id: 3, text: "Update service availability calendar", completed: true, priority: "low" },
+    { id: 4, text: "Prepare monthly report", completed: false, priority: "high" },
+    { id: 5, text: "Schedule team meeting", completed: false, priority: "medium" },
+    { id: 6, text: "Review client feedback", completed: false, priority: "low" }
+  ]);
+
+  // Sample data for charts
+  const [chartData] = useState<{
+    revenueData: Array<{ month: string; revenue: number; consultations: number }>;
+    taskStats: Array<{ name: string; value: number; color: string }>;
+    clientData: Array<{ name: string; clients: number; color: string }>;
+  }>({
+    revenueData: [
+      { month: 'Jan', revenue: 12000, consultations: 8 },
+      { month: 'Feb', revenue: 15000, consultations: 12 },
+      { month: 'Mar', revenue: 18000, consultations: 15 },
+      { month: 'Apr', revenue: 22000, consultations: 18 },
+      { month: 'May', revenue: 25000, consultations: 22 },
+      { month: 'Jun', revenue: 28000, consultations: 25 },
+      { month: 'Jul', revenue: 32000, consultations: 28 }
+    ],
+    taskStats: [
+      { name: 'Completed', value: 45, color: '#10B981' },
+      { name: 'In Progress', value: 30, color: '#F59E0B' },
+      { name: 'Pending', value: 15, color: '#3B82F6' },
+      { name: 'Overdue', value: 10, color: '#EF4444' }
+    ],
+    clientData: [
+      { name: 'Student Visas', clients: 25, color: '#8B5CF6' },
+      { name: 'Skilled Migration', clients: 18, color: '#06B6D4' },
+      { name: 'Family Visas', clients: 12, color: '#10B981' },
+      { name: 'Business Visas', clients: 8, color: '#F59E0B' }
+    ]
+  });
+
+  // Recent activities data
+  const [recentActivities] = useState([
+    { id: 1, type: 'booking', message: 'New booking from John Smith', time: '2 hours ago', status: 'pending' },
+    { id: 2, type: 'payment', message: 'Payment received from Sarah Johnson', time: '4 hours ago', status: 'completed' },
+    { id: 3, type: 'review', message: 'New 5-star review from Mike Wilson', time: '6 hours ago', status: 'completed' },
+    { id: 4, type: 'consultation', message: 'Consultation completed with Lisa Brown', time: '1 day ago', status: 'completed' }
+  ]);
+  
   const router = useRouter();
   const [formError, setFormError] = useState("");
   const [formSuccess, setFormSuccess] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  
+  // Notification functions
+  const addNotification = (notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => {
+    const newNotification: Notification = {
+      ...notification,
+      id: Date.now().toString(),
+      timestamp: new Date(),
+      read: false,
+    };
+    setNotifications(prev => [newNotification, ...prev.slice(0, 9)]); // Keep only last 10 notifications
+  };
+  
+  const markNotificationAsRead = (id: string) => {
+    setNotifications(prev => 
+      prev.map(notif => 
+        notif.id === id ? { ...notif, read: true } : notif
+      )
+    );
+  };
+  
+  const markAllNotificationsAsRead = () => {
+    setNotifications(prev => 
+      prev.map(notif => ({ ...notif, read: true }))
+    );
+  };
+  
+  const removeNotification = (id: string) => {
+    setNotifications(prev => prev.filter(notif => notif.id !== id));
+  };
+  
+  const getUnreadNotificationCount = () => {
+    return notifications.filter(notif => !notif.read).length;
+  };
+  
+  // Generate real graph data from actual consultations
+  const generateConsultationData = () => {
+    if (agentStats.monthlyData && agentStats.monthlyData.length > 0) {
+      // Use data from stats API
+      const maxValue = Math.max(...agentStats.monthlyData.map((d: any) => d.consultations));
+      
+      return agentStats.monthlyData.map((item: any) => ({
+        month: item.month,
+        value: item.consultations,
+        height: maxValue > 0 ? Math.max(3, (item.consultations / maxValue) * 100) : 3
+      }));
+    }
+    
+    // Fallback to consultations data if stats API data is not available
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'];
+    
+    console.log('Generating consultation data with consultations:', consultations);
+    console.log('Consultations array length:', consultations.length);
+    
+    // Group consultations by month
+    const monthlyData = months.map((month, index) => {
+      const monthNumber = index + 1; // 1 for Jan, 2 for Feb, etc.
+      const consultationsInMonth = consultations.filter(consultation => {
+        const consultationDate = new Date(consultation.date);
+        console.log(`Checking consultation ${consultation.id}: date=${consultation.date}, month=${consultationDate.getMonth()}, index=${index}`);
+        return consultationDate.getMonth() === index; // 0-indexed month
+      });
+      
+      return {
+        month,
+        value: consultationsInMonth.length,
+        consultations: consultationsInMonth
+      };
+    });
+    
+    // Calculate heights based on the maximum value
+    const maxValue = Math.max(...monthlyData.map(d => d.value));
+    
+    const result = monthlyData.map(item => ({
+      ...item,
+      height: maxValue > 0 ? Math.max(3, (item.value / maxValue) * 100) : 3
+    }));
+    
+    console.log('Real consultation data:', result, 'Total consultations:', consultations.length, 'Max value:', maxValue);
+    return result;
+  };
+  
+  const generateRevenueData = () => {
+    if (agentStats.monthlyData && agentStats.monthlyData.length > 0) {
+      // Use data from stats API
+      const maxValue = Math.max(...agentStats.monthlyData.map((d: any) => d.revenue));
+      
+      return agentStats.monthlyData.map((item: any) => ({
+        month: item.month,
+        value: item.revenue,
+        height: maxValue > 0 ? Math.max(3, (item.revenue / maxValue) * 100) : 3
+      }));
+    }
+    
+    // Fallback to consultations data if stats API data is not available
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'];
+    
+    // Group consultations by month and calculate revenue
+    const monthlyData = months.map((month, index) => {
+      const consultationsInMonth = consultations.filter(consultation => {
+        const consultationDate = new Date(consultation.date);
+        return consultationDate.getMonth() === index; // 0-indexed month
+      });
+      
+      // Calculate total revenue for this month
+      const monthlyRevenue = consultationsInMonth.reduce((total, consultation) => {
+        return total + (consultation.totalAmount || 0);
+      }, 0);
+      
+      return {
+        month,
+        value: monthlyRevenue,
+        consultations: consultationsInMonth
+      };
+    });
+    
+    // Calculate heights based on the maximum value
+    const maxValue = Math.max(...monthlyData.map(d => d.value));
+    
+    const result = monthlyData.map(item => ({
+      ...item,
+      height: maxValue > 0 ? Math.max(3, (item.value / maxValue) * 100) : 3
+    }));
+    
+    console.log('Real revenue data:', result, 'Total revenue:', agentStats.totalEarnings, 'Max value:', maxValue);
+    return result;
+  };
+  
+  // Function to detect profile changes and add notifications
+  const detectProfileChanges = (newProfile: typeof initialProfile) => {
+    const changes: string[] = [];
+    
+    if (previousProfile.fullName !== newProfile.fullName) {
+      changes.push('Full Name');
+    }
+    if (previousProfile.mobile !== newProfile.mobile) {
+      changes.push('Phone Number');
+    }
+    if (previousProfile.email !== newProfile.email) {
+      changes.push('Email');
+    }
+    if (previousProfile.businessEmail !== newProfile.businessEmail) {
+      changes.push('Business Email');
+    }
+    if (previousProfile.languages !== newProfile.languages) {
+      changes.push('Languages');
+    }
+    if (previousProfile.areasOfPractice !== newProfile.areasOfPractice) {
+      changes.push('Areas of Practice');
+    }
+    if (previousProfile.industries !== newProfile.industries) {
+      changes.push('Industries');
+    }
+    if (previousProfile.officeAddress !== newProfile.officeAddress) {
+      changes.push('Office Address');
+    }
+    if (previousProfile.aboutCompany !== newProfile.aboutCompany) {
+      changes.push('About Company');
+    }
+    
+    if (changes.length > 0) {
+      addNotification({
+        type: 'success',
+        title: 'Profile Updated',
+        message: `Your ${changes.join(', ')} ${changes.length === 1 ? 'was' : 'were'} updated successfully.`,
+        action: 'View Profile'
+      });
+    }
+    
+    setPreviousProfile(newProfile);
+  };
+  
+  // Function to detect new bookings
+  const detectNewBookings = (newConsultations: Consultation[]) => {
+    const previousIds = new Set(previousConsultations.map(c => c.id));
+    const newBookings = newConsultations.filter(c => !previousIds.has(c.id));
+    
+    if (newBookings.length > 0) {
+      newBookings.forEach(booking => {
+        addNotification({
+          type: 'info',
+          title: 'New Booking',
+          message: `You have a new booking from ${booking.clientName} for ${booking.serviceName || 'consultation'} on ${new Date(booking.date).toLocaleDateString()} at ${booking.startTime}.`,
+          action: 'View Booking'
+        });
+      });
+    }
+    
+    setPreviousConsultations(newConsultations);
+  };
+  
+  // Debug effect to log graph data
+  useEffect(() => {
+    console.log('AgentStats changed:', agentStats);
+    const consultationData = generateConsultationData();
+    const revenueData = generateRevenueData();
+    console.log('Graph data debug:', {
+      consultation: consultationData.map(d => ({ month: d.month, value: d.value, height: d.height })),
+      revenue: revenueData.map(d => ({ month: d.month, value: d.value, height: d.height }))
+    });
+  }, [agentStats.totalBookings, agentStats.totalEarnings]);
+
   // Add state for consultancy settings
   const [availability, setAvailability] = useState([
     { day: "Mon", start: "09:00", end: "17:00", unavailable: false },
@@ -101,7 +437,7 @@ export default function AgentDashboard() {
   // Add state for tab navigation
   const [activeTab, setActiveTab] = useState<'account' | 'consultancy' | 'notification'>('account');
   // Add state for consultations tab
-  const [activeMainTab, setActiveMainTab] = useState<'dashboard' | 'consultations' | 'settings' | 'calendar'>('dashboard');
+  const [activeMainTab, setActiveMainTab] = useState<'dashboard' | 'consultations' | 'clients' | 'settings' | 'calendar' | 'calendar-sync' | 'documents'>('dashboard');
   // Add state for consultations filter
   const [consultationFilter, setConsultationFilter] = useState<'upcoming' | 'past' | 'dateRange'>('upcoming');
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: '', end: '' });
@@ -123,6 +459,7 @@ export default function AgentDashboard() {
     endTime: string;
     schedule: string;
     fee: string;
+    totalAmount?: number;
     status: string;
     outcome: string;
     serviceName?: string;
@@ -134,19 +471,81 @@ export default function AgentDashboard() {
   
   const [consultations, setConsultations] = useState<Consultation[]>([]);
   const [consultationsLoading, setConsultationsLoading] = useState(false);
+
+  // Debug effect to monitor consultations state
+  useEffect(() => {
+    console.log('Consultations state changed:', consultations);
+    console.log('Consultations length:', consultations.length);
+  }, [consultations]);
+  
+  // Clients state
+  type Client = {
+    id: string;
+    name: string;
+    email: string;
+    phone: string;
+    totalBookings: number;
+    lastBooking: string;
+    status: 'active' | 'inactive';
+    totalSpent: number;
+    notes?: string;
+  };
+  
+  const [clients, setClients] = useState<Client[]>([]);
+  const [clientsLoading, setClientsLoading] = useState(false);
+  const [clientSearchTerm, setClientSearchTerm] = useState('');
+  const [clientSortField, setClientSortField] = useState<'name' | 'email' | 'totalBookings' | 'lastBooking' | 'totalSpent'>('name');
+  const [clientSortDirection, setClientSortDirection] = useState<'asc' | 'desc'>('asc');
+  
+  // Client details modal state
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [isClientModalOpen, setIsClientModalOpen] = useState(false);
+  
+  // Service management state
+  interface Service {
+    id?: string;
+    name: string;
+    description: string;
+    price: number;
+    duration: number;
+    isActive: boolean;
+  }
+  
+  const [services, setServices] = useState<Service[]>([]);
+  const [servicesLoading, setServicesLoading] = useState(false);
+  const [agentId, setAgentId] = useState<string | null>(null);
+  
+  // Documents state
+  const [documents, setDocuments] = useState<any[]>([]);
+  const [documentsLoading, setDocumentsLoading] = useState(false);
+  
+  // Profile updates state
+  const [pendingUpdates, setPendingUpdates] = useState<any[]>([]);
+  const [pendingUpdatesLoading, setPendingUpdatesLoading] = useState(false);
   
   // Traditional KPI stats matching the image design
   const stats = [
     { label: "Revenue (lifetime)", value: "$0.00", color: "text-green-700" },
     { label: "Total consultations", value: consultations.length, color: "text-blue-600" },
     { label: "Total cases", value: 0, color: "text-purple-600" },
-    { label: "Total clients", value: 0, color: "text-green-600" },
+    { label: "Total clients", value: clients.length, color: "text-green-600" },
     { label: "New ratings", value: 0, color: "text-pink-600" },
   ];
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const consultationsPerPage = 5;
+
+  // Client details modal handlers
+  const handleViewClientDetails = (client: Client) => {
+    setSelectedClient(client);
+    setIsClientModalOpen(true);
+  };
+
+  const handleCloseClientModal = () => {
+    setIsClientModalOpen(false);
+    setSelectedClient(null);
+  };
 
   // Fetch consultations data
   const fetchConsultations = async () => {
@@ -155,27 +554,41 @@ export default function AgentDashboard() {
       const response = await fetch('/api/bookings');
       if (response.ok) {
         const data = await response.json();
-        const formattedConsultations: Consultation[] = data.bookings.map((booking: any) => ({
-          id: booking.id,
-          clientName: booking.clientName || booking.client.name || 'Unknown Client',
-          clientEmail: booking.clientEmail || booking.client.email || '',
-          clientPhone: booking.clientPhone || booking.client.phone || '',
-          date: booking.date,
-          startTime: booking.startTime,
-          endTime: booking.endTime,
-          schedule: `${new Date(booking.date).toLocaleDateString()} ${booking.startTime}`,
-          fee: booking.totalAmount ? `$${parseFloat(booking.totalAmount).toFixed(2)}` : 'Free',
-          status: booking.status,
-          outcome: booking.status === 'COMPLETED' ? 'Completed' : 
-                   booking.status === 'CANCELLED' ? 'Cancelled' : 
-                   booking.status === 'NO_SHOW' ? 'No Show' : '-',
-          serviceName: booking.service?.name || 'General Consultation',
-          meetingType: booking.meetingType,
-          notes: booking.notes || '',
-          duration: booking.duration || 30,
-          seenByAgent: booking.seenByAgent || false,
-        }));
+        console.log('Raw API data:', data);
+        console.log('Number of bookings from API:', data.bookings.length);
+        
+        const formattedConsultations: Consultation[] = data.bookings.map((booking: any) => {
+          const consultation = {
+            id: booking.id,
+            clientName: booking.clientName || booking.client.name || 'Unknown Client',
+            clientEmail: booking.clientEmail || booking.client.email || '',
+            clientPhone: booking.clientPhone || booking.client.phone || '',
+            date: booking.date,
+            startTime: booking.startTime,
+            endTime: booking.endTime,
+            schedule: `${new Date(booking.date).toLocaleDateString()} ${booking.startTime}`,
+            fee: booking.totalAmount ? `$${parseFloat(booking.totalAmount).toFixed(2)}` : 'Free',
+            totalAmount: booking.totalAmount ? parseFloat(booking.totalAmount) : 0,
+            status: booking.status,
+            outcome: booking.status === 'COMPLETED' ? 'Completed' : 
+                     booking.status === 'CANCELLED' ? 'Cancelled' : 
+                     booking.status === 'NO_SHOW' ? 'No Show' : '-',
+            serviceName: booking.service?.name || 'General Consultation',
+            meetingType: booking.meetingType,
+            notes: booking.notes || '',
+            duration: booking.duration || 30,
+            seenByAgent: booking.seenByAgent || false,
+          };
+          console.log('Formatted consultation:', consultation);
+          return consultation;
+        });
+        
+        console.log('Setting consultations state with:', formattedConsultations);
         setConsultations(formattedConsultations);
+        
+        // Detect new bookings and add notifications
+        detectNewBookings(formattedConsultations);
+        
         // Calculate unread bookings (PENDING status bookings that haven't been seen)
         const unreadCount = formattedConsultations.filter(
           consultation => consultation.status === 'PENDING' && !consultation.seenByAgent
@@ -190,6 +603,176 @@ export default function AgentDashboard() {
       setConsultations([]);
     } finally {
       setConsultationsLoading(false);
+    }
+  };
+
+  // Fetch clients data
+  const fetchClients = async () => {
+    setClientsLoading(true);
+    try {
+      const response = await fetch('/api/bookings');
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Group bookings by client to create client records
+        const clientMap = new Map<string, Client>();
+        
+        data.bookings.forEach((booking: any) => {
+          const clientId = booking.clientId || booking.client?.id || 'unknown';
+          const clientName = booking.clientName || booking.client?.name || 'Unknown Client';
+          const clientEmail = booking.clientEmail || booking.client?.email || '';
+          const clientPhone = booking.clientPhone || booking.client?.phone || '';
+          
+          if (!clientMap.has(clientId)) {
+            clientMap.set(clientId, {
+              id: clientId,
+              name: clientName,
+              email: clientEmail,
+              phone: clientPhone,
+              totalBookings: 0,
+              lastBooking: '',
+              status: 'active' as const,
+              totalSpent: 0,
+              notes: ''
+            });
+          }
+          
+          const client = clientMap.get(clientId)!;
+          client.totalBookings += 1;
+          
+          const bookingDate = new Date(booking.date);
+          if (!client.lastBooking || bookingDate > new Date(client.lastBooking)) {
+            client.lastBooking = booking.date;
+          }
+          
+          if (booking.totalAmount) {
+            client.totalSpent += parseFloat(booking.totalAmount);
+          }
+        });
+        
+        const clientsArray = Array.from(clientMap.values());
+        setClients(clientsArray);
+      } else {
+        console.error('Failed to fetch clients');
+        setClients([]);
+      }
+    } catch (error) {
+      console.error('Error fetching clients:', error);
+      setClients([]);
+    } finally {
+      setClientsLoading(false);
+    }
+  };
+
+  // Fetch agent services
+  const fetchAgentServices = async () => {
+    console.log('Fetching agent services...');
+    setServicesLoading(true);
+    try {
+      // Get agent profile ID from session or fetch it
+      console.log('Fetching agent data...');
+      const agentResponse = await fetch('/api/agents/me');
+      console.log('Agent response status:', agentResponse.status);
+      
+      if (agentResponse.ok) {
+        const agentData = await agentResponse.json();
+        console.log('Agent data:', agentData);
+        const currentAgentId = agentData.agent?.id;
+        console.log('Agent ID:', currentAgentId);
+        setAgentId(currentAgentId);
+        
+        if (currentAgentId) {
+          console.log('Fetching services for agent:', currentAgentId);
+          const servicesResponse = await fetch(`/api/agents/${currentAgentId}/services`);
+          console.log('Services response status:', servicesResponse.status);
+          
+          if (servicesResponse.ok) {
+            const servicesData = await servicesResponse.json();
+            console.log('Services data:', servicesData);
+            setServices(servicesData.services || []);
+          } else {
+            console.error('Failed to fetch services:', servicesResponse.statusText);
+          }
+        } else {
+          console.log('No agent ID found');
+        }
+      } else {
+        console.error('Failed to fetch agent data:', agentResponse.statusText);
+      }
+    } catch (error) {
+      console.error('Error fetching services:', error);
+    } finally {
+      setServicesLoading(false);
+    }
+  };
+
+  // Fetch documents
+  const fetchDocuments = async () => {
+    setDocumentsLoading(true);
+    try {
+      const response = await fetch('/api/agents/me');
+      if (response.ok) {
+        const data = await response.json();
+        setDocuments(data.agent.documents || []);
+      } else {
+        console.error('Failed to fetch documents');
+        setDocuments([]);
+      }
+    } catch (error) {
+      console.error('Error fetching documents:', error);
+      setDocuments([]);
+    } finally {
+      setDocumentsLoading(false);
+    }
+  };
+
+  // Fetch pending profile updates
+  const fetchPendingUpdates = async () => {
+    setPendingUpdatesLoading(true);
+    try {
+      const response = await fetch('/api/agents/profile');
+      if (response.ok) {
+        const data = await response.json();
+        setPendingUpdates(data.pendingUpdates || []);
+      } else {
+        console.error('Failed to fetch pending updates');
+        setPendingUpdates([]);
+      }
+    } catch (error) {
+      console.error('Error fetching pending updates:', error);
+      setPendingUpdates([]);
+    } finally {
+      setPendingUpdatesLoading(false);
+    }
+  };
+
+  // Handle services change
+  const handleServicesChange = async (updatedServices: Service[]) => {
+    try {
+      if (agentId) {
+        // Update local state immediately for better UX
+        setServices(updatedServices);
+
+        // Send updates to server
+        const response = await fetch(`/api/agents/${agentId}/services`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ services: updatedServices }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to update services');
+        }
+
+        const data = await response.json();
+        // Update with server response to get proper IDs
+        setServices(data.services || updatedServices);
+      }
+    } catch (error) {
+      console.error('Error updating services:', error);
+      alert('Failed to update services. Please try again.');
     }
   };
 
@@ -419,29 +1002,14 @@ export default function AgentDashboard() {
     }
   };
 
-  const handleLogout = async () => {
-    setProfileDropdownOpen(false);
-    
-    try {
-      // Call the NextAuth signOut API directly
-      const response = await fetch('/api/auth/signout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      if (response.ok) {
-        // Redirect to home page
-        window.location.href = '/';
-      } else {
-        // Fallback: redirect to login page
-        window.location.href = '/login';
-      }
-    } catch (error) {
-      // Fallback: redirect to login page
-      window.location.href = '/login';
-    }
+  const handleLogout = () => {
+    signOut({ callbackUrl: "/" });
+  };
+
+  // Debug function to clear session
+  const handleClearSession = () => {
+    console.log('Clearing session...');
+    signOut({ callbackUrl: "/login" });
   };
 
   // Notification system for new bookings
@@ -488,10 +1056,12 @@ export default function AgentDashboard() {
   };
 
   useEffect(() => {
-    async function fetchProfile() {
+    const fetchProfile = async () => {
+      console.log('Fetching profile, session:', session);
       const res = await fetch("/api/agents/me");
       if (res.ok) {
         const data = await res.json();
+        console.log('Profile API response:', data);
         const user = data.user;
         const agent = user.agentProfile;
         
@@ -501,8 +1071,8 @@ export default function AgentDashboard() {
           return;
         }
         
-        setProfile(prev => ({
-          ...prev,
+        const newProfileData = {
+          ...initialProfile,
           fullName: user.name || "",
           marnOrLpn: agent?.maraNumber || "",
           mobile: user.phone || "",
@@ -516,17 +1086,38 @@ export default function AgentDashboard() {
           officeAddress: agent?.businessAddress || "",
           aboutCompany: agent?.bio || "",
           // Add more fields as needed
-        }));
+        };
+        
+        setProfile(newProfileData);
+        
+        // Detect profile changes and add notifications
+        detectProfileChanges(newProfileData);
+        
+
+        
+        console.log('User name from API:', user.name);
+        console.log('Agent profile:', agent);
         // Set logo and photo previews if available
         const logoDoc = agent?.documents?.find((d: any) => d.type === "businessLogo");
-        if (logoDoc) setLogoPreview(logoDoc.url);
+        if (logoDoc) {
+          setLogoPreview(logoDoc.url);
+          console.log('Logo URL set:', logoDoc.url);
+        }
         const photoDoc = agent?.documents?.find((d: any) => d.type === "photo");
-        if (photoDoc) setPhotoPreview(photoDoc.url);
+        console.log('All documents:', agent?.documents);
+        console.log('Photo document found:', photoDoc);
+        if (photoDoc) {
+          setPhotoPreview(photoDoc.url);
+          console.log('Photo URL set:', photoDoc.url);
+        } else {
+          console.log('No photo document found');
+        }
       }
-    }
+    };
+    
     fetchProfile();
     fetchConsultations(); // Also fetch consultations on mount
-  }, []);
+  }, [session]); // Re-fetch when session changes
 
   // Fetch consultations when consultations tab is active
   useEffect(() => {
@@ -535,11 +1126,92 @@ export default function AgentDashboard() {
     }
   }, [activeMainTab]);
 
+  // Fetch clients when clients tab is active
+  useEffect(() => {
+    if (activeMainTab === 'clients') {
+      fetchClients();
+    }
+  }, [activeMainTab]);
+
+  // Fetch agent stats from dedicated endpoint
+  const fetchAgentStats = async () => {
+    try {
+      const response = await fetch('/api/agents/stats');
+      if (response.ok) {
+        const stats = await response.json();
+        console.log('Fetched agent stats:', stats);
+        setAgentStats(stats);
+      } else {
+        console.error('Failed to fetch agent stats:', response.status);
+      }
+    } catch (error) {
+      console.error('Error fetching agent stats:', error);
+    }
+  };
+
+  // Todo functions
+  const addTodo = (text: string) => {
+    const newTodo = {
+      id: Date.now(),
+      text,
+      completed: false,
+      priority: "medium" as "high" | "medium" | "low"
+    };
+    setTodos(prev => [...prev, newTodo]);
+  };
+
+  const toggleTodo = (id: number) => {
+    setTodos(prev => prev.map(todo => 
+      todo.id === id ? { ...todo, completed: !todo.completed } : todo
+    ));
+  };
+
+  const deleteTodo = (id: number) => {
+    setTodos(prev => prev.filter(todo => todo.id !== id));
+  };
+
+  // Fetch agent data when component mounts
+  useEffect(() => {
+    const fetchAgentData = async () => {
+      try {
+        const agentResponse = await fetch('/api/agents/me');
+        if (agentResponse.ok) {
+          const agentData = await agentResponse.json();
+          const currentAgentId = agentData.agent?.id;
+          setAgentId(currentAgentId);
+        }
+      } catch (error) {
+        console.error('Error fetching agent data:', error);
+      }
+    };
+    
+    fetchAgentData();
+    fetchAgentStats(); // Fetch stats when component mounts
+  }, []);
+
+  // Fetch services when consultancy tab is active
+  useEffect(() => {
+    console.log('useEffect triggered - activeMainTab:', activeMainTab, 'activeTab:', activeTab);
+    if (activeMainTab === 'settings' && activeTab === 'consultancy') {
+      console.log('Fetching services - conditions met');
+      fetchAgentServices();
+    }
+    if (activeMainTab === 'documents') {
+      console.log('Fetching documents - conditions met');
+      fetchDocuments();
+    }
+    if (activeMainTab === 'settings') {
+      console.log('Fetching pending updates - conditions met');
+      fetchPendingUpdates();
+    }
+  }, [activeMainTab, activeTab]);
+
   // Check for new bookings every 30 seconds when not on consultations tab
   useEffect(() => {
     const interval = setInterval(() => {
       if (activeMainTab !== 'consultations') {
         fetchConsultations();
+        fetchAgentStats(); // Also refresh stats
       }
     }, 30000);
 
@@ -627,10 +1299,15 @@ export default function AgentDashboard() {
     } else if (type === 'file') {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) {
+        console.log('File selected:', name, file.name, file.size);
         if (name === "profilePicture") {
-          setPhotoPreview(URL.createObjectURL(file));
+          const previewUrl = URL.createObjectURL(file);
+          setPhotoPreview(previewUrl);
+          console.log('Profile picture preview set:', previewUrl);
         } else if (name === "businessLogo") {
-          setLogoPreview(URL.createObjectURL(file));
+          const previewUrl = URL.createObjectURL(file);
+          setLogoPreview(previewUrl);
+          console.log('Business logo preview set:', previewUrl);
         }
         setProfile(prev => ({ ...prev, [name]: file }));
       }
@@ -645,10 +1322,9 @@ export default function AgentDashboard() {
   const validateProfile = () => {
     const errors = [];
     if (!profile.fullName.trim()) errors.push("Full Name is required");
-    if (!profile.marnOrLpn.trim()) errors.push("MARN or LPN is required");
     if (!profile.mobile.trim()) errors.push("Mobile is required");
     if (!profile.email.trim()) errors.push("Email is required");
-    if (!profile.businessName.trim()) errors.push("Business Name is required");
+    // Removed validation for disabled fields (MARN/LPN, ABN, Business Name)
     return errors;
   };
 
@@ -656,64 +1332,97 @@ export default function AgentDashboard() {
     e.preventDefault();
     setFormError("");
     setFormSuccess("");
+    setIsSaving(true);
+    
     const errors = validateProfile();
     if (errors.length > 0) {
       setFormError(errors.join(", "));
+      setIsSaving(false);
       return;
     }
-    const formData = new FormData();
-    Object.entries(profile).forEach(([key, value]) => {
-      if (typeof value === 'string' && value) {
-        formData.append(key, value);
-      } else if (typeof value === 'object' && value !== null && 'name' in value && 'size' in value && 'type' in value) {
-        // Type-safe check for file-like objects
-        const fileObj = value as { name: string; size: number; type: string };
-        if (typeof fileObj.name === 'string' && typeof fileObj.size === 'number' && typeof fileObj.type === 'string') {
-          formData.append(key, value as any);
-        }
-      }
-    });
+
     try {
+      // Create FormData for file uploads
+      const formData = new FormData();
+      formData.append('fullName', profile.fullName);
+      formData.append('mobile', profile.mobile);
+      formData.append('email', profile.email);
+      formData.append('maraNumber', profile.marnOrLpn); // API expects maraNumber
+      formData.append('abn', profile.abn);
+      formData.append('businessName', profile.businessName);
+      formData.append('businessEmail', profile.businessEmail);
+      formData.append('languages', profile.languages);
+      formData.append('specializations', profile.areasOfPractice);
+      formData.append('industries', profile.industries);
+      formData.append('businessAddress', profile.officeAddress);
+      formData.append('bio', profile.aboutCompany);
+
+      // Add files if they exist
+      if (profile.profilePicture && typeof profile.profilePicture !== 'string') {
+        formData.append('profilePicture', profile.profilePicture as File);
+      }
+      if (profile.businessLogo && typeof profile.businessLogo !== 'string') {
+        formData.append('businessLogo', profile.businessLogo as File);
+      }
+
       const res = await fetch('/api/agents/me', {
         method: 'PATCH',
         body: formData,
       });
+
+      const data = await res.json();
+
       if (res.ok) {
-        const data = await res.json();
-        const user = data.user;
-        const agent = user.agentProfile;
-        setProfile(prev => ({
-          ...prev,
-          fullName: user.name || "",
-          marnOrLpn: agent?.maraNumber || "",
-          mobile: user.phone || "",
-          email: user.email || "",
-          abn: agent?.abn || "",
-          businessName: agent?.businessName || "",
-          businessEmail: agent?.businessEmail || "",
-          languages: (agent?.languages || []).join(", "),
-          areasOfPractice: (agent?.specializations || []).join(", "),
-          industries: profile.industries, // not in db, keep local
-          officeAddress: agent?.businessAddress || "",
-          aboutCompany: agent?.bio || "",
-        }));
-        // Set logo and photo previews if available
-        const logoDoc = agent?.documents?.find((d: any) => d.type === "businessLogo");
-        if (logoDoc) setLogoPreview(logoDoc.url);
-        const photoDoc = agent?.documents?.find((d: any) => d.type === "photo");
-        if (photoDoc) setPhotoPreview(photoDoc.url);
-        setFormSuccess('Profile updated successfully!');
+          setFormSuccess('Profile updated successfully!');
+        
+        // Add success notification
+        addNotification({
+          type: 'success',
+          title: 'Profile Updated',
+          message: 'Your profile has been updated successfully!',
+          action: 'View Profile'
+        });
+        
+        // Refresh the profile data to show updated information
+        const profileRes = await fetch("/api/agents/me");
+        if (profileRes.ok) {
+          const profileData = await profileRes.json();
+          const user = profileData.user;
+          const agent = user.agentProfile;
+          
+          // Update photo and logo previews
+          const logoDoc = agent?.documents?.find((d: any) => d.type === "businessLogo");
+          if (logoDoc) setLogoPreview(logoDoc.url);
+          const photoDoc = agent?.documents?.find((d: any) => d.type === "photo");
+          if (photoDoc) setPhotoPreview(photoDoc.url);
+        }
       } else {
-        setFormError('Failed to update profile');
+        setFormError(data.error || 'Failed to update profile');
+        
+        // Add error notification
+        addNotification({
+          type: 'error',
+          title: 'Profile Update Failed',
+          message: data.error || 'Failed to update profile. Please try again.',
+        });
       }
     } catch (err) {
+      console.error('Error updating profile:', err);
       setFormError('Failed to update profile');
+      
+      // Add error notification
+      addNotification({
+        type: 'error',
+        title: 'Profile Update Failed',
+        message: 'Failed to update profile. Please try again.',
+      });
+    } finally {
+      setIsSaving(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <ToastContainer toasts={toasts} onRemoveToast={removeToast} />
       <div className="flex flex-1 min-h-0">
         {/* Modern Purple Sidebar */}
         <aside className="hidden md:flex flex-col w-64 bg-gradient-to-b from-purple-900 via-purple-800 to-purple-900 text-white py-8 px-4 min-h-full shadow-xl">
@@ -774,7 +1483,7 @@ export default function AgentDashboard() {
                   onClick={() => {
                     if (link.tab === 'consultations') {
                       handleConsultationsTabClick();
-                    } else if (link.tab && (link.tab === 'dashboard' || link.tab === 'settings' || link.tab === 'calendar')) {
+                    } else if (link.tab && (link.tab === 'dashboard' || link.tab === 'clients' || link.tab === 'settings' || link.tab === 'calendar' || link.tab === 'calendar-sync')) {
                       setActiveMainTab(link.tab);
                     }
                   }}
@@ -792,16 +1501,43 @@ export default function AgentDashboard() {
           <div className="my-4 border-t border-purple-700" />
           <nav className="space-y-1 mb-4">
             {secondaryLinks.filter(link => link.label !== "Notification").map(link => (
-              <a key={link.label} href="#" className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-purple-800 transition-all duration-200 font-medium text-purple-200 hover:text-white relative hover:shadow-md">
+              <button
+                key={link.label}
+                onClick={() => {
+                  if (link.label === "Documents") {
+                    setActiveMainTab('documents');
+                  }
+                }}
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 font-medium w-full text-left ${
+                  activeMainTab === 'documents' && link.label === "Documents" 
+                    ? 'bg-purple-700 text-white shadow-lg' 
+                    : 'text-purple-200 hover:bg-purple-800 hover:text-white hover:shadow-md'
+                }`}
+              >
                 {link.icon} <span>{link.label}</span>
-              </a>
+              </button>
             ))}
           </nav>
           <div className="mt-auto flex flex-col items-center pt-8">
-            <div className="w-14 h-14 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold mb-2 shadow-lg">
-              {profile.fullName ? profile.fullName.charAt(0) : 'A'}
+            <div className="w-14 h-14 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold mb-2 shadow-lg overflow-hidden">
+              {photoPreview ? (
+                <img 
+                  src={photoPreview} 
+                  alt="Profile" 
+                  className="w-full h-full object-cover"
+                  onLoad={() => console.log('Profile image loaded successfully:', photoPreview)}
+                  onError={(e) => {
+                    console.log('Profile image failed to load:', photoPreview);
+                    e.currentTarget.style.display = 'none';
+                    e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                  }}
+                />
+              ) : null}
+              <div className={`w-full h-full flex items-center justify-center text-white font-semibold ${photoPreview ? 'hidden' : ''}`}>
+                {profile.fullName ? profile.fullName.charAt(0).toUpperCase() : 'A'}
             </div>
-            <div className="font-semibold text-white">{profile.fullName || 'Agent Name'}</div>
+            </div>
+            <div className="font-semibold text-white">{profile.fullName || session?.user?.name || 'Agent Name'}</div>
             <div className="text-xs text-purple-200 flex items-center gap-1">
               <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
               Online
@@ -819,34 +1555,137 @@ export default function AgentDashboard() {
               </h1>
             </div>
                           <div className="flex items-center gap-4">
-                <button className="relative p-2 text-gray-600 hover:text-purple-600 transition-colors duration-200 hover:bg-purple-50 rounded-lg">
-                  <BellIcon className="w-5 h-5" />
-                  {unreadBookingsCount > 0 && (
+                <div className="relative">
+                  <button 
+                    onClick={() => setShowNotifications(!showNotifications)}
+                    className="relative p-2 text-gray-600 hover:text-purple-600 transition-colors duration-200 hover:bg-purple-50 rounded-lg"
+                  >
+                <BellIcon className="w-5 h-5" />
+                    {getUnreadNotificationCount() > 0 && (
                     <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center animate-pulse">
-                      {unreadBookingsCount}
-                    </span>
+                        {getUnreadNotificationCount()}
+                  </span>
+                )}
+              </button>
+                  
+                  {/* Notification Dropdown */}
+                  {showNotifications && (
+                    <div 
+                      data-notification-dropdown
+                      className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-xl z-50 max-h-96 overflow-y-auto"
+                    >
+                      <div className="p-4 border-b border-gray-100">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-lg font-semibold text-gray-900">Notifications</h3>
+                          {getUnreadNotificationCount() > 0 && (
+                            <button
+                              onClick={markAllNotificationsAsRead}
+                              className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                            >
+                              Mark all as read
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="p-2">
+                        {notifications.length === 0 ? (
+                          <div className="text-center py-8 text-gray-500">
+                            <BellIcon className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                            <p>No notifications yet</p>
+                          </div>
+                        ) : (
+                          notifications.map((notification) => (
+                            <div
+                              key={notification.id}
+                              className={`p-3 rounded-lg mb-2 transition-all duration-200 ${
+                                notification.read 
+                                  ? 'bg-gray-50 hover:bg-gray-100' 
+                                  : 'bg-blue-50 hover:bg-blue-100 border-l-4 border-blue-500'
+                              }`}
+                              onClick={() => markNotificationAsRead(notification.id)}
+                            >
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <div className={`w-2 h-2 rounded-full ${
+                                      notification.type === 'success' ? 'bg-green-500' :
+                                      notification.type === 'info' ? 'bg-blue-500' :
+                                      notification.type === 'warning' ? 'bg-yellow-500' :
+                                      'bg-red-500'
+                                    }`}></div>
+                                    <h4 className="font-semibold text-gray-900 text-sm">
+                                      {notification.title}
+                                    </h4>
+                                  </div>
+                                  <p className="text-gray-600 text-sm mb-2">
+                                    {notification.message}
+                                  </p>
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-xs text-gray-500">
+                                      {notification.timestamp.toLocaleTimeString()}
+                                    </span>
+                                    {notification.action && (
+                                      <button className="text-xs text-blue-600 hover:text-blue-800 font-medium">
+                                        {notification.action}
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    removeNotification(notification.id);
+                                  }}
+                                  className="text-gray-400 hover:text-gray-600 ml-2"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                  </svg>
+                                </button>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
                   )}
-                </button>
+                </div>
               <div className="relative" ref={profileDropdownRef}>
                 <button
                   onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
                   className="flex items-center gap-3 bg-white rounded-lg p-2 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200"
                 >
-                  <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-sm shadow-md">
-                    {profile.fullName ? profile.fullName.charAt(0) : 'A'}
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-900 text-sm">{profile.fullName || 'Agent Name'}</p>
-                    <p className="text-xs text-gray-500">MARA Agent</p>
-                  </div>
+                  <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-sm shadow-md overflow-hidden">
+                    {photoPreview ? (
+                      <img 
+                        src={photoPreview} 
+                        alt="Profile" 
+                        className="w-full h-full object-cover"
+                        onLoad={() => console.log('Header profile image loaded successfully:', photoPreview)}
+                        onError={(e) => {
+                          console.log('Header profile image failed to load:', photoPreview);
+                          e.currentTarget.style.display = 'none';
+                          e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                        }}
+                      />
+                    ) : null}
+                    <div className={`w-full h-full flex items-center justify-center text-white font-semibold text-sm ${photoPreview ? 'hidden' : ''}`}>
+                      {profile.fullName ? profile.fullName.charAt(0).toUpperCase() : 'A'}
+                    </div>
+                </div>
+                <div>
+                    <p className="font-semibold text-gray-900 text-sm">{profile.fullName || session?.user?.name || 'Agent Name'}</p>
+                  <p className="text-xs text-gray-500">MARA Agent</p>
+                </div>
                   <svg 
                     className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${profileDropdownOpen ? 'rotate-180' : ''}`} 
                     fill="none" 
                     stroke="currentColor" 
                     viewBox="0 0 24 24"
                   >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
                 </button>
                 
                 {profileDropdownOpen && (
@@ -889,179 +1728,11 @@ export default function AgentDashboard() {
             </div>
           </div>
           {activeMainTab === 'dashboard' && (
-            <>
-              {/* Modern Welcome Banner */}
-              <div className="bg-gradient-to-r from-purple-600 via-blue-600 to-purple-700 rounded-2xl p-6 mb-6 flex items-center justify-between shadow-xl">
-                <div className="flex-1">
-                  <h1 className="text-2xl font-bold text-white mb-2">
-                    Good morning, {profile.fullName || 'Agent'}! 👋
-                  </h1>
-                  <p className="text-purple-100 text-base">
-                    Ready to help clients with their immigration journey? Let's make today productive!
-                  </p>
-                </div>
-                <div className="hidden md:block">
-                  <div className="w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center backdrop-blur-sm">
-                    <span className="text-2xl">👨‍💼</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Modern Invite Card */}
-              <div className="bg-gradient-to-r from-orange-50 to-yellow-50 border border-orange-200 rounded-2xl p-6 mb-6 shadow-lg">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <h3 className="text-lg font-bold text-gray-900 mb-2">Invite your colleagues to MaraPlace</h3>
-                    <p className="text-gray-600 mb-3 text-sm">
-                      Reward yourself and join our MARA community! Get recognition for every invited colleague! Everyone wins!
-                    </p>
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg shadow-sm">
-                        <span className="text-xl">💰</span>
-                        <span className="font-bold text-gray-900">+50</span>
-                      </div>
-                      <button className="text-orange-600 hover:text-orange-800 font-semibold text-sm transition-colors duration-200">
-                        Send invite →
-                      </button>
-                    </div>
-                  </div>
-                  <div className="hidden md:block">
-                    <div className="w-16 h-16 bg-gradient-to-r from-orange-400 to-yellow-400 rounded-full flex items-center justify-center shadow-lg">
-                      <span className="text-xl">⭐</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Modern KPI Cards */}
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-                {/* Revenue */}
-                <div className="bg-white rounded-2xl shadow-lg p-6 flex flex-col items-center hover:shadow-xl transition-all duration-300 border border-gray-100">
-                  <div className="w-12 h-12 bg-gradient-to-r from-green-400 to-green-600 rounded-xl flex items-center justify-center mb-3 shadow-lg">
-                    <span className="text-white text-xl">💰</span>
-                  </div>
-                  <div className="text-2xl font-bold text-gray-900 mb-1">$0.00</div>
-                  <div className="text-gray-500 text-sm text-center mb-3">Revenue (lifetime)</div>
-                  <div className="w-full">
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-gradient-to-r from-green-400 to-green-600 h-2 rounded-full transition-all duration-500" style={{ width: '75%' }}></div>
-                    </div>
-                    <div className="flex justify-end mt-2">
-                      <span className="text-green-600 text-xs font-bold">$2,450 revenue</span>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Consultations */}
-                <div className="bg-white rounded-2xl shadow-lg p-6 flex flex-col items-center hover:shadow-xl transition-all duration-300 border border-gray-100">
-                  <div className="w-12 h-12 bg-gradient-to-r from-blue-400 to-blue-600 rounded-xl flex items-center justify-center mb-3 shadow-lg">
-                    <span className="text-white text-xl">📋</span>
-                  </div>
-                  <div className="text-2xl font-bold text-gray-900 mb-1">{consultations.length}</div>
-                  <div className="text-gray-500 text-sm text-center mb-3">Total consultations</div>
-                  <div className="w-full">
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-gradient-to-r from-blue-400 to-blue-600 h-2 rounded-full transition-all duration-500" style={{ width: `${Math.min((consultations.length / 200) * 100, 100)}%` }}></div>
-                    </div>
-                    <div className="flex justify-end mt-2">
-                      <span className="text-blue-600 text-xs font-bold">{consultations.length} consultations</span>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Cases */}
-                <div className="bg-white rounded-2xl shadow-lg p-6 flex flex-col items-center hover:shadow-xl transition-all duration-300 border border-gray-100">
-                  <div className="w-12 h-12 bg-gradient-to-r from-purple-400 to-purple-600 rounded-xl flex items-center justify-center mb-3 shadow-lg">
-                    <span className="text-white text-xl">📁</span>
-                  </div>
-                  <div className="text-2xl font-bold text-gray-900 mb-1">0</div>
-                  <div className="text-gray-500 text-sm text-center mb-3">Total cases</div>
-                  <div className="w-full">
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-gradient-to-r from-purple-400 to-purple-600 h-2 rounded-full transition-all duration-500" style={{ width: '45%' }}></div>
-                    </div>
-                    <div className="flex justify-end mt-2">
-                      <span className="text-purple-600 text-xs font-bold">89 cases</span>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Clients */}
-                <div className="bg-white rounded-2xl shadow-lg p-6 flex flex-col items-center hover:shadow-xl transition-all duration-300 border border-gray-100">
-                  <div className="w-12 h-12 bg-gradient-to-r from-indigo-400 to-indigo-600 rounded-xl flex items-center justify-center mb-3 shadow-lg">
-                    <span className="text-white text-xl">👥</span>
-                  </div>
-                  <div className="text-2xl font-bold text-gray-900 mb-1">0</div>
-                  <div className="text-gray-500 text-sm text-center">Total clients</div>
-                </div>
-                
-                {/* Ratings */}
-                <div className="bg-white rounded-2xl shadow-lg p-6 flex flex-col items-center hover:shadow-xl transition-all duration-300 border border-gray-100">
-                  <div className="w-12 h-12 bg-gradient-to-r from-pink-400 to-pink-600 rounded-xl flex items-center justify-center mb-3 shadow-lg">
-                    <span className="text-white text-xl">⭐</span>
-                  </div>
-                  <div className="text-2xl font-bold text-gray-900 mb-1">0</div>
-                  <div className="text-gray-500 text-sm text-center mb-3">New ratings</div>
-                  <div className="w-full">
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-gradient-to-r from-pink-400 to-pink-600 h-2 rounded-full transition-all duration-500" style={{ width: '78%' }}></div>
-                    </div>
-                    <div className="flex justify-end mt-2">
-                      <span className="text-pink-600 text-xs font-bold">156 ratings</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Modern Charts */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-white rounded-2xl shadow-lg p-6 min-h-[220px] flex flex-col border border-gray-100">
-                  <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-lg font-bold text-gray-900">Consultations (lifetime)</h3>
-                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <span className="text-blue-600 text-sm">📊</span>
-                    </div>
-                  </div>
-                  <div className="flex-1 flex items-end justify-between space-x-2">
-                    {[0, 1, 2, 3, 4, 5, 6].map((month) => {
-                      const height = Math.random() * 100 + 20; // Random height for demo
-                      return (
-                        <div key={month} className="flex flex-col items-center flex-1">
-                          <div 
-                            className="w-full bg-gradient-to-t from-blue-400 to-blue-600 rounded-t-lg transition-all duration-500 hover:from-blue-500 hover:to-blue-700 shadow-sm"
-                            style={{ height: `${height}%` }}
-                          ></div>
-                          <div className="text-xs text-gray-500 mt-2 font-medium">{['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'][month]}</div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-                
-                <div className="bg-white rounded-2xl shadow-lg p-6 min-h-[220px] flex flex-col border border-gray-100">
-                  <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-lg font-bold text-gray-900">Revenue (lifetime)</h3>
-                    <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                      <span className="text-green-600 text-sm">💰</span>
-                    </div>
-                  </div>
-                  <div className="flex-1 flex items-end justify-between space-x-2">
-                    {[0, 1, 2, 3, 4, 5, 6].map((month) => {
-                      const height = Math.random() * 100 + 20; // Random height for demo
-                      return (
-                        <div key={month} className="flex flex-col items-center flex-1">
-                          <div 
-                            className="w-full bg-gradient-to-t from-green-400 to-green-600 rounded-t-lg transition-all duration-500 hover:from-green-500 hover:to-green-700 shadow-sm"
-                            style={{ height: `${height}%` }}
-                          ></div>
-                          <div className="text-xs text-gray-500 mt-2 font-medium">{['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'][month]}</div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            </>
+            <EnhancedDashboard 
+              agentStats={agentStats}
+              profile={profile}
+              session={session}
+            />
           )}
           {activeMainTab === 'consultations' && (
             <div className="bg-white rounded-2xl shadow-lg p-8 w-full">
@@ -1365,8 +2036,175 @@ export default function AgentDashboard() {
               </div>
             </div>
           )}
+          {activeMainTab === 'clients' && (
+            <div className="bg-white rounded-2xl shadow-lg p-8 w-full">
+              <h1 className="text-2xl font-bold mb-6 text-blue-900">Clients</h1>
+              
+              {/* Search and Filter Bar */}
+              <div className="flex flex-col md:flex-row items-center justify-between mb-6 gap-4">
+                {/* Search */}
+                <div className="relative w-full md:w-80">
+                  <input
+                    type="text"
+                    placeholder="Search clients by name, email, or phone..."
+                    value={clientSearchTerm}
+                    onChange={(e) => setClientSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <svg className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+
+                {/* Sort Controls */}
+                <div className="flex items-center gap-4">
+                  <select
+                    value={clientSortField}
+                    onChange={(e) => setClientSortField(e.target.value as any)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="name">Sort by Name</option>
+                    <option value="email">Sort by Email</option>
+                    <option value="totalBookings">Sort by Total Bookings</option>
+                    <option value="lastBooking">Sort by Last Booking</option>
+                    <option value="totalSpent">Sort by Total Spent</option>
+                  </select>
+                  <button
+                    onClick={() => setClientSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}
+                    className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    {clientSortDirection === 'asc' ? '↑' : '↓'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Clients Table */}
+              {clientsLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  <span className="ml-2 text-gray-600">Loading clients...</span>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="bg-gray-50 border-b border-gray-200">
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Client Name</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Email</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Phone</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Total Bookings</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Last Booking</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Total Spent</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(() => {
+                        // Filter and sort clients
+                        let filteredClients = clients.filter(client =>
+                          client.name.toLowerCase().includes(clientSearchTerm.toLowerCase()) ||
+                          client.email.toLowerCase().includes(clientSearchTerm.toLowerCase()) ||
+                          client.phone.includes(clientSearchTerm)
+                        );
+
+                        // Sort clients
+                        filteredClients.sort((a, b) => {
+                          let aValue: any = a[clientSortField];
+                          let bValue: any = b[clientSortField];
+
+                          if (clientSortField === 'lastBooking') {
+                            aValue = new Date(aValue || 0);
+                            bValue = new Date(bValue || 0);
+                          }
+
+                          if (typeof aValue === 'string') {
+                            aValue = aValue.toLowerCase();
+                            bValue = bValue.toLowerCase();
+                          }
+
+                          if (clientSortDirection === 'asc') {
+                            return aValue > bValue ? 1 : -1;
+                          } else {
+                            return aValue < bValue ? 1 : -1;
+                          }
+                        });
+
+                        return filteredClients.map((client) => (
+                          <tr key={client.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                            <td className="py-4 px-4">
+                              <div className="flex items-center">
+                                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                                  <span className="text-blue-600 font-semibold text-sm">
+                                    {client.name.charAt(0).toUpperCase()}
+                                  </span>
+                                </div>
+                                <div>
+                                  <div className="font-medium text-gray-900">{client.name}</div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-4 px-4 text-gray-700">{client.email}</td>
+                            <td className="py-4 px-4 text-gray-700">{client.phone}</td>
+                            <td className="py-4 px-4">
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                {client.totalBookings}
+                              </span>
+                            </td>
+                            <td className="py-4 px-4 text-gray-700">
+                              {client.lastBooking ? new Date(client.lastBooking).toLocaleDateString() : 'Never'}
+                            </td>
+                            <td className="py-4 px-4 text-gray-700 font-medium">
+                              ${client.totalSpent.toFixed(2)}
+                            </td>
+                            <td className="py-4 px-4">
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                client.status === 'active' 
+                                  ? 'bg-green-100 text-green-800' 
+                                  : 'bg-gray-100 text-gray-800'
+                              }`}>
+                                {client.status}
+                              </span>
+                            </td>
+                            <td className="py-4 px-4">
+                              <div className="flex items-center space-x-2">
+                                <button 
+                                  onClick={() => handleViewClientDetails(client)}
+                                  className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                                >
+                                  View Details
+                                </button>
+                                <button className="text-green-600 hover:text-green-800 text-sm font-medium">
+                                  Message
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ));
+                      })()}
+                    </tbody>
+                  </table>
+                  
+                  {clients.filter(client =>
+                    client.name.toLowerCase().includes(clientSearchTerm.toLowerCase()) ||
+                    client.email.toLowerCase().includes(clientSearchTerm.toLowerCase()) ||
+                    client.phone.includes(clientSearchTerm)
+                  ).length === 0 && (
+                    <div className="text-center py-12 text-gray-500">
+                      {clientSearchTerm ? 'No clients found matching your search.' : 'No clients found.'}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
           {activeMainTab === 'calendar' && (
             <ModernCalendarLayout />
+          )}
+          {activeMainTab === 'calendar-sync' && (
+            <div className="bg-white rounded-3xl shadow-2xl p-8 md:p-12 w-full h-full">
+              <CalendarSync agentId={agentId || ''} />
+            </div>
           )}
           {activeMainTab === 'settings' && (
             <div className="bg-white rounded-3xl shadow-2xl p-8 md:p-12 w-full h-full">
@@ -1397,20 +2235,36 @@ export default function AgentDashboard() {
                   {/* Profile Card */}
                   <div className="bg-white rounded-2xl shadow-lg p-8 flex flex-col items-center w-full md:w-80 mb-8 md:mb-0">
                     <div className="relative group mb-4">
-                      <img src={photoPreview || "/default-profile.png"} alt="Profile" className="w-28 h-28 rounded-full object-cover border-4 border-blue-100 shadow" />
+                      <img 
+                        src={photoPreview || "/default-profile.png"} 
+                        alt="Profile" 
+                        className="w-28 h-28 rounded-full object-cover border-4 border-blue-100 shadow"
+                        onError={(e) => {
+                          console.log('Image failed to load:', photoPreview);
+                          e.currentTarget.src = "/default-profile.png";
+                        }}
+                      />
                       <label className="absolute bottom-2 right-2 bg-blue-600 p-2 rounded-full cursor-pointer shadow-lg group-hover:scale-110 transition-transform">
                         <CameraIcon className="w-5 h-5 text-white" />
                         <input name="profilePicture" type="file" accept="image/*" onChange={handleChange} className="hidden" />
                       </label>
                     </div>
-                    <div className="text-xl font-bold text-gray-800 mb-1">{profile.fullName || "Agent Name"}</div>
+                                         <div className="text-xl font-bold text-gray-800 mb-1">{profile.fullName || session?.user?.name || "Agent Name"}</div>
                     <div className="text-blue-700 font-semibold text-sm mb-1">{profile.marnOrLpn ? `MARN/LPN: ${profile.marnOrLpn}` : "MARN/LPN: ---"}</div>
                     <div className="text-gray-500 text-xs mb-2">ABN: {profile.abn || "---"}</div>
                     <div className="text-gray-400 text-xs mt-4 mb-4">Member since <span className="font-medium text-blue-700">12 Feb 2020</span></div>
                     {/* Business Logo Upload */}
                     <div className="w-full flex flex-col items-center mt-2">
                       <div className="relative group mb-2">
-                        <img src={logoPreview || "/default-logo.png"} alt="Business Logo" className="w-20 h-20 object-contain bg-gray-100 rounded border-2 border-blue-200 shadow" />
+                        <img 
+                          src={logoPreview || "/default-logo.png"} 
+                          alt="Business Logo" 
+                          className="w-20 h-20 object-contain bg-gray-100 rounded border-2 border-blue-200 shadow"
+                          onError={(e) => {
+                            console.log('Logo failed to load:', logoPreview);
+                            e.currentTarget.src = "/default-logo.png";
+                          }}
+                        />
                         <label className="absolute bottom-2 right-2 bg-blue-600 p-2 rounded-full cursor-pointer shadow-lg group-hover:scale-110 transition-transform">
                           <CameraIcon className="w-4 h-4 text-white" />
                           <input name="businessLogo" type="file" accept="image/*" onChange={handleChange} className="hidden" />
@@ -1439,10 +2293,11 @@ export default function AgentDashboard() {
                         <input
                           name="marnOrLpn"
                           value={profile.marnOrLpn}
-                          onChange={handleChange}
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition"
-                          required
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-gray-600 cursor-not-allowed"
+                          disabled
+                          title="MARN/LPN cannot be edited"
                         />
+                        <p className="text-xs text-gray-500 mt-1">This field cannot be edited</p>
                       </div>
                       <div>
                         <label className="block text-sm font-semibold mb-2">Mobile</label>
@@ -1470,19 +2325,22 @@ export default function AgentDashboard() {
                         <input
                           name="abn"
                           value={profile.abn}
-                          onChange={handleChange}
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition"
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-gray-600 cursor-not-allowed"
+                          disabled
+                          title="ABN cannot be edited"
                         />
+                        <p className="text-xs text-gray-500 mt-1">This field cannot be edited</p>
                       </div>
                       <div>
                         <label className="block text-sm font-semibold mb-2">Business Name</label>
                         <input
                           name="businessName"
                           value={profile.businessName}
-                          onChange={handleChange}
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition"
-                          required
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-gray-600 cursor-not-allowed"
+                          disabled
+                          title="Business Name cannot be edited"
                         />
+                        <p className="text-xs text-gray-500 mt-1">This field cannot be edited</p>
                       </div>
                       <div>
                         <label className="block text-sm font-semibold mb-2">Business Email</label>
@@ -1545,42 +2403,161 @@ export default function AgentDashboard() {
                       </div>
                     </div>
                     <div className="flex justify-end gap-4 mt-10">
-                      <button type="button" className="px-6 py-2 rounded-lg border border-gray-300 text-gray-600 font-semibold bg-white hover:bg-gray-100 transition">Cancel</button>
-                      <Button type="submit" className="px-8 py-2 text-lg rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold shadow">Save Changes</Button>
+                      <button 
+                        type="button" 
+                        className="px-6 py-2 rounded-lg border border-gray-300 text-gray-600 font-semibold bg-white hover:bg-gray-100 transition"
+                        disabled={isSaving}
+                      >
+                        Cancel
+                      </button>
+                      <Button 
+                        type="submit" 
+                        className="px-8 py-2 text-lg rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold shadow disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={isSaving}
+                      >
+                        {isSaving ? 'Saving...' : 'Save Changes'}
+                      </Button>
                     </div>
                   </form>
                 </div>
               )}
+              {/* Pending Profile Updates Section - Temporarily disabled */}
               {activeTab === 'consultancy' && (
-                <div className="max-w-2xl mx-auto">
+                <div className="max-w-4xl mx-auto">
                   <h2 className="text-2xl font-bold mb-6 text-green-700">Consultancy Settings</h2>
-                  <form onSubmit={e => { e.preventDefault(); alert('Consultancy settings saved (placeholder)'); }}>
-                    <div className="mb-6">
-                      <label className="block text-sm font-medium mb-1">Consultancy fee per session (AUD)</label>
-                      <input
-                        name="consultancyFee"
-                        value={profile.consultancyFee}
-                        onChange={handleChange}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition"
-                        type="number"
-                        min="0"
+                  
+                  {/* Service Management */}
+                  <div className="mb-8">
+                    
+                    {!servicesLoading && agentId ? (
+                      <ServiceManager
+                        agentId={agentId}
+                        services={services}
+                        onServicesChange={handleServicesChange}
                       />
-                    </div>
-                    <div className="mb-6">
-                      <label className="block text-sm font-medium mb-1">Consultancy Terms & Conditions Agreement</label>
+                    ) : (
+                      <div className="flex items-center justify-center py-12">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        <span className="ml-2 text-gray-600">Loading services...</span>
+                      </div>
+                    )}
+                    
+
+                  </div>
+
+                  {/* Terms & Conditions Agreement */}
+                  <div className="bg-white rounded-lg border border-gray-200 p-6">
+                    <h3 className="text-lg font-semibold mb-4 text-gray-800">Terms & Conditions Agreement</h3>
                       <div className="flex items-center gap-3 bg-gray-50 border rounded px-3 py-2">
-                        <span>{agreementUploaded ? "Agreement uploaded" : "Agreement not uploaded"}</span>
+                      <span className="text-gray-600">{agreementUploaded ? "Agreement uploaded" : "Agreement not uploaded"}</span>
                         <Button size="sm" className="ml-auto" onClick={handleAgreementUpload}>Upload agreement</Button>
                       </div>
                     </div>
-                    <div className="flex justify-end gap-4 mt-10">
-                      <Button type="submit" className="px-8 py-2 text-lg rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold shadow">Save Changes</Button>
-                    </div>
-                  </form>
                 </div>
               )}
               {activeTab === 'notification' && (
                 <div className="max-w-2xl mx-auto text-gray-500 text-center py-20">Notification settings coming soon...</div>
+              )}
+            </div>
+          )}
+          {activeMainTab === 'documents' && (
+            <div className="bg-white rounded-3xl shadow-2xl p-8 md:p-12 w-full h-full">
+              <div className="flex items-center mb-8">
+                <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center mr-4">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-3xl font-bold text-gray-900">Documents</h2>
+                  <p className="text-gray-600 text-lg mt-2">Manage your uploaded documents and files</p>
+                </div>
+              </div>
+
+              {documentsLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  <span className="ml-2 text-gray-600">Loading documents...</span>
+                </div>
+              ) : documents.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 bg-gradient-to-br from-gray-200 to-gray-300 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-700 mb-2">No Documents Yet</h3>
+                  <p className="text-gray-500 mb-4">You haven't uploaded any documents yet.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {documents.map((document, index) => (
+                    <div key={document.id || index} className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 border border-gray-200/50 shadow-lg hover:shadow-xl transition-all duration-300">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
+                          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                          </svg>
+                        </div>
+                        <span className="px-3 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full border border-green-200">
+                          {document.type || 'Document'}
+                        </span>
+                      </div>
+                      
+                      <div className="space-y-3">
+                        <div>
+                          <h3 className="font-semibold text-gray-900 mb-1">
+                            {document.type === 'photo' ? 'Profile Photo' :
+                             document.type === 'businessLogo' ? 'Business Logo' :
+                             document.type === 'agreement' ? 'Terms & Conditions' :
+                             document.type || 'Document'}
+                          </h3>
+                          <p className="text-sm text-gray-600">
+                            {document.type === 'photo' ? 'Your profile picture' :
+                             document.type === 'businessLogo' ? 'Your business logo' :
+                             document.type === 'agreement' ? 'Terms and conditions agreement' :
+                             'Uploaded document'}
+                          </p>
+                        </div>
+                        
+                        <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                          <div className="flex items-center space-x-2">
+                            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span className="text-xs text-gray-500">
+                              {document.createdAt ? new Date(document.createdAt).toLocaleDateString() : 'Recently uploaded'}
+                            </span>
+                          </div>
+                          
+                          <div className="flex space-x-2">
+                            <a
+                              href={document.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-200"
+                              title="View document"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              </svg>
+                            </a>
+                            <button
+                              onClick={() => window.open(document.url, '_blank')}
+                              className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors duration-200"
+                              title="Download document"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           )}
@@ -1602,6 +2579,13 @@ export default function AgentDashboard() {
             isOpen={showBookingDetailsModal}
             onClose={closeBookingDetailsModal}
             bookingId={selectedBookingId}
+          />
+
+          {/* Client Details Modal */}
+          <ClientDetailsModal
+            client={selectedClient}
+            isOpen={isClientModalOpen}
+            onClose={handleCloseClientModal}
           />
         </main>
       </div>
